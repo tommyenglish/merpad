@@ -1,4 +1,4 @@
-/* ========= 1.  Import and register things */
+/* ========= Import and register things */
 import mermaid from './mermaid.esm.min.mjs';
 import elkLoader from './mermaid-layout-elk.esm.min.mjs';  
 
@@ -6,7 +6,7 @@ mermaid.registerLayoutLoaders([elkLoader]);
 
 window.mermaid = mermaid;
 
-/* ========= 2.  Themes ========= */
+/* ========= Themes ========= */
 const themes = {
   default:{theme:'default'},
   dark:{theme:'dark'},
@@ -24,12 +24,13 @@ const themes = {
       primaryTextColor:'#000',lineColor:'#000',nodeTextColor:'#000'}}
 };
 
-/* ========= 3.  State ========= */
+/* ========= State ========= */
+const LS_KEY = 'merpad-current-diagram';
 let currentTheme='print';
 let currentLayout='dagre';
 let zoom=1;
 
-/* ========= 4.  Apply mermaid config ========= */
+/* ========= Apply mermaid config ========= */
 function applyConfig(){
   const cfg=structuredClone(themes[currentTheme]);
   if(currentLayout==='dagre'){
@@ -45,12 +46,12 @@ function applyConfig(){
 }
 applyConfig();
 
-/* ========= 5.  DOM refs ========= */
+/* ========= DOM refs ========= */
 const $=q=>document.querySelector(q);
 const editor=$('#editor'),output=$('#diagram');
 const themeSel=$('#themeSelect'),layoutSel=$('#layoutSelect'),dims=$('#dims');
 
-/* ========= 6.  Helpers ========= */
+/* ========= Helpers ========= */
 function updateDims(){
   const svg=$('svg',output);
   if(!svg){dims.textContent='';return;}
@@ -63,7 +64,7 @@ function applyZoom(){
   updateDims();
 }
 
-/* ========= 7.  Render ========= */
+/* ========= Render ========= */
 async function render(){
   const code=editor.value.trim();
   if(!code){output.innerHTML='<em>Nothing to render.</em>';updateDims();return;}
@@ -73,11 +74,19 @@ async function render(){
   }catch(e){output.innerHTML=`<pre style="color:red">${e.message}</pre>`;updateDims();}
 }
 
-/* ========= 8.  Event wiring ========= */
+/* ========= Event wiring ========= */
 $('#render').onclick=render;
 $('#zoomIn').onclick =()=>{zoom*=1.25;applyZoom();};
 $('#zoomOut').onclick=()=>{zoom/=1.25;applyZoom();};
 $('#zoomReset').onclick=()=>{zoom=1;applyZoom();};
+
+let saveTimeout;
+editor.addEventListener('input', () => {
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    localStorage.setItem(LS_KEY, editor.value);
+  }, 400);
+});
 
 themeSel.value=currentTheme;
 layoutSel.value=currentLayout;
@@ -102,7 +111,7 @@ fileInput.onchange=()=>{
   r.readAsText(file,'utf-8');
 };
 
-/* ----- PNG / SVG / Copy helpers (unchanged from before) ----- */
+/* ----- PNG / SVG / Copy helpers ----- */
 function getPngBlob(cb){
   const svg=$('svg',output);if(!svg)return alert('Nothing to export!');
   const clone=svg.cloneNode(true);clone.style.transform='';
@@ -135,11 +144,19 @@ $('#btnCopy').onclick=()=>{
     .catch(e=>alert('Failed: '+e)));
 };
 
-/* ========= 9.  Starter diagram ========= */
-editor.value=`flowchart TD
+/* ========= Starter diagram ========= */
+
+const saved = localStorage.getItem(LS_KEY);
+if (saved !== null && saved.trim()) {
+  editor.value = saved;
+} else {
+  // default
+  editor.value = `flowchart TD
   A[Start] --> B{Is it sunny?}
   B -- Yes --> C[Go for a walk]
   B -- No  --> D[Read a book]
   C --> E[End]
   D --> E`;
+}
+
 render();
