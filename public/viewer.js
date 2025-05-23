@@ -26,6 +26,7 @@ const themes = {
 
 /* ========= State ========= */
 const LS_KEY = 'merpad-current-diagram';
+const DEBOUNCE = 400; // ms to wait after last keystroke
 let currentTheme='print';
 let currentLayout='dagre';
 let zoom=1;
@@ -75,17 +76,24 @@ async function render(){
 }
 
 /* ========= Event wiring ========= */
-$('#render').onclick=render;
 $('#zoomIn').onclick =()=>{zoom*=1.25;applyZoom();};
 $('#zoomOut').onclick=()=>{zoom/=1.25;applyZoom();};
 $('#zoomReset').onclick=()=>{zoom=1;applyZoom();};
 
-let saveTimeout;
-editor.addEventListener('input', () => {
-  clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(() => {
-    localStorage.setItem(LS_KEY, editor.value);
-  }, 400);
+let pending;
+editor.addEventListener('input', e => {
+  clearTimeout(pending);
+  pending = setTimeout(() => {
+    const isWhitespaceOnly =
+      (e.data && /^[ \t\n\r]$/.test(e.data)) ||  // normal typing
+      (e.inputType === 'insertParagraph') ||     // Enter on some browsers
+      (e.inputType === 'insertLineBreak');       // Shift+Enter
+	
+    if (!isWhitespaceOnly) {
+      render();                                    // auto‑render
+      localStorage.setItem(LS_KEY, editor.value);  // auto‑save
+	}
+  }, DEBOUNCE);
 });
 
 themeSel.value=currentTheme;
