@@ -1,0 +1,22 @@
+{
+  "name": "merpad",
+  "version": "0.1.0",
+  "description": "Pocket‑sized Mermaid editor & viewer",
+  "author": "Tommy English <dynadyn@gmail.com>",
+  "license": "SEE LICENSE DETAILS IN README",
+  "type": "module",
+  "scripts": {
+    "postinstall": "node scripts/copy-assets.js",
+    "dev": "npm run copy && python -m http.server 8000 -d public",
+    "copy": "node scripts/copy-assets.js",
+    "build": "rollup -c"
+  },
+  "dependencies": {
+    "mermaid": "11.6.0",
+    "@mermaid-js/layout-elk": "0.1.7"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^15",
+    "rollup": "^4"
+  }
+}

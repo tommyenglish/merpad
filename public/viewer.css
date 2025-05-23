@@ -1,0 +1,10 @@
+/* layout */
+html,body{margin:0;height:100%;font-family:system-ui,sans-serif;background:#fafafa}
+body{display:grid;grid-template-rows:auto 1fr}
+#toolbar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;padding:.5rem 1rem;background:#eee}
+#toolbar>strong{margin-right:auto}
+button,select{padding:.35rem .8rem;font-size:1rem;cursor:pointer}
+#dims{font-size:.9rem;color:#444;margin-left:.5rem}
+#editor{height:200px;width:100%;resize:vertical;border:none;border-bottom:1px solid #ccc;padding:1rem;font-family:Consolas,monospace;box-sizing:border-box}
+#diagram{overflow:auto;padding:1rem}
+#diagram svg{transform-origin:top left}
