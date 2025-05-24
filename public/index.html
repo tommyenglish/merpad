@@ -8,37 +8,48 @@
 <body>
 
   <div id="toolbar">
-    <strong>Mermaid Viewer</strong>
+	<strong class="title">Merpad &mdash; <em class="subtitle">A minimalist mermaid editor &amp; viewer for quick image capture</em></strong>
 
-    <label for="themeSelect">Theme:</label>
-    <select id="themeSelect">
-      <option value="default">Default</option>
-      <option value="dark">Dark</option>
-      <option value="forest">Forest</option>
-      <option value="neutral">Neutral</option>
-      <option value="vibrant">Vibrant (custom)</option>
-      <option value="print">Print (B/W)</option>
-    </select>
+	<div class="controls">
+		<div class="group">
+			<label for="themeSelect">Theme:</label>
+			<select id="themeSelect">
+			  <option value="default">Default</option>
+			  <option value="dark">Dark</option>
+			  <option value="forest">Forest</option>
+			  <option value="neutral">Neutral</option>
+			  <option value="vibrant">Vibrant (custom)</option>
+			  <option value="print">Print (B/W)</option>
+			</select>
 
-    <label for="layoutSelect">Layout:</label>
-    <select id="layoutSelect">
-      <option value="dagre">Hierarchical (Dagre)</option>
-      <option value="elk-layered">Adaptive (ELK layered)</option>
-      <option value="elk-mrtree">Tree (ELK mrtree)</option>
-      <option value="elk-radial">Radial (ELK radial)</option>
-    </select>
+			<label for="layoutSelect">Layout:</label>
+			<select id="layoutSelect">
+			  <option value="dagre">Hierarchical (Dagre)</option>
+			  <option value="elk-layered">Adaptive (ELK layered)</option>
+			  <option value="elk-mrtree">Tree (ELK mrtree)</option>
+			  <option value="elk-radial">Radial (ELK radial)</option>
+			</select>
+		</div>	
 
-    <button id="zoomIn">＋</button>
-    <button id="zoomOut">−</button>
-    <button id="zoomReset">100 %</button>
-    <span id="dims"></span>
-
-    <button id="btnSvg">SVG</button>
-    <button id="btnPng">PNG</button>
-    <button id="btnCopy">Copy</button>
-    <button id="btnSave">Save</button>
-    <button id="btnOpen">Open…</button>
-    <input  id="fileOpen" type="file" accept=".mmd,.txt" hidden>
+		<div class="group">
+			<button id="zoomIn">＋</button>
+			<button id="zoomOut">−</button>
+			<button id="zoomReset">100 %</button>
+			<span id="dims"></span>
+		</div>
+		
+		<div class="group">
+			<button id="btnSvg">SVG…</button>
+			<button id="btnPng">PNG…</b…utton>
+			<button id="btnCopy">Copy PNG</button>
+		</div>
+		
+		<div class="group">
+			<button id="btnOpen">Open…</button>
+			<button id="btnSave">Save…</button>
+			<input  id="fileOpen" type="file" accept=".mmd,.txt" hidden>
+		</div>
+	</div>
   </div>
 
   <textarea id="editor" spellcheck="false"></textarea>
