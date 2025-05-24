@@ -1,8 +1,8 @@
 /* ========= Import and register things */
 import mermaid from './mermaid.esm.min.mjs';
-import elkLoader from './mermaid-layout-elk.esm.min.mjs';  
+import elkLayouts from './mermaid-layout-elk.esm.min.mjs'; 
 
-mermaid.registerLayoutLoaders([elkLoader]);
+mermaid.registerLayoutLoaders(elkLayouts);
 
 window.mermaid = mermaid;
 
