@@ -102,12 +102,34 @@ themeSel.onchange=()=>{currentTheme=themeSel.value;applyConfig();render();};
 layoutSel.onchange=()=>{currentLayout=layoutSel.value;applyConfig();render();};
 
 /* ----- Save .mmd ----- */
-$('#btnSave').onclick=()=>{
+$('#btnSave').onclick=async ()=>{
   const text=editor.value;if(!text.trim())return;
   const blob=new Blob([text],{type:'text/plain'});
-  const url=URL.createObjectURL(blob);
-  const a=Object.assign(document.createElement('a'),{href:url,download:'diagram.mmd'});
-  document.body.append(a);a.click();a.remove();URL.revokeObjectURL(url);
+
+  // Try to use File System Access API for save dialog
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: 'diagram.mmd',
+        types: [{
+          description: 'Mermaid Diagram',
+          accept: {'text/plain': ['.mmd', '.txt']}
+        }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+    } catch (err) {
+      // User cancelled or error occurred
+      if (err.name !== 'AbortError') {
+        console.error('Save failed:', err);
+        alert('Save failed: ' + err.message);
+      }
+    }
+  } else {
+    // Fallback to instant download for unsupported browsers
+    download(blob, 'diagram.mmd');
+  }
 };
 /* ----- Open .mmd ----- */
 const fileInput=$('#fileOpen');
