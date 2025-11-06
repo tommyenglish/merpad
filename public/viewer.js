@@ -30,7 +30,7 @@ const DEBOUNCE = 400; // ms to wait after last keystroke
 let currentTheme='print';
 let currentLayout='dagre';
 let zoom=1;
-let orientation='vertical'; // 'vertical' or 'horizontal'
+let orientation='horizontal'; // 'vertical' or 'horizontal'
 
 /* ========= Apply mermaid config ========= */
 function applyConfig(){
@@ -89,7 +89,7 @@ function restoreSplitPosition() {
     editor.style.flexBasis = savedSplit + 'px';
   } else {
     // Reset to default
-    editor.style.flexBasis = orientation === 'vertical' ? '200px' : '50%';
+    editor.style.flexBasis = orientation === 'vertical' ? '200px' : '30%';
   }
 }
 restoreSplitPosition();

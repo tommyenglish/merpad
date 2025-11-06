@@ -14,7 +14,7 @@ button,select{padding:.35rem .8rem;font-size:1rem;cursor:pointer}
 
 /* Horizontal layout (side by side) */
 #splitContainer.horizontal{flex-direction:row}
-#splitContainer.horizontal #editor{flex:0 0 50%;width:auto;height:100%}
+#splitContainer.horizontal #editor{flex:0 0 30%;width:auto;height:100%}
 #splitContainer.horizontal #divider{flex:0 0 6px;width:6px;height:100%;cursor:col-resize}
 
 /* Editor - flexible size */
