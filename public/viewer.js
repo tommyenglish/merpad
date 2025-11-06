@@ -32,6 +32,17 @@ let currentLayout='dagre';
 let zoom=1;
 let orientation='horizontal'; // 'vertical' or 'horizontal'
 
+/* ========= Theme backgrounds ========= */
+// Define background colors for each theme
+const themeBackgrounds = {
+  default: '#ffffff',
+  dark: '#1e1e1e',
+  forest: '#f4f4f4',
+  neutral: '#ffffff',
+  vibrant: '#1a1a1a',
+  print: '#ffffff'
+};
+
 /* ========= Apply mermaid config ========= */
 function applyConfig(){
   const cfg=structuredClone(themes[currentTheme]);
@@ -66,6 +77,9 @@ function applyZoom(){
   const svg=$('svg',output);
   if(svg) svg.style.transform=`scale(${zoom})`;
   updateDims();
+}
+function updateDiagramBackground(){
+  output.style.backgroundColor=themeBackgrounds[currentTheme]||'#ffffff';
 }
 
 /* ========= Resizable divider ========= */
@@ -186,7 +200,7 @@ editor.addEventListener('input', e => {
 
 themeSel.value=currentTheme;
 layoutSel.value=currentLayout;
-themeSel.onchange=()=>{currentTheme=themeSel.value;applyConfig();render();};
+themeSel.onchange=()=>{currentTheme=themeSel.value;applyConfig();updateDiagramBackground();render();};
 layoutSel.onchange=()=>{currentLayout=layoutSel.value;applyConfig();render();};
 
 /* ----- Save .mmd ----- */
@@ -230,16 +244,6 @@ fileInput.onchange=()=>{
 };
 
 /* ----- PNG / SVG / Copy helpers ----- */
-// Define background colors for each theme
-const themeBackgrounds = {
-  default: '#ffffff',
-  dark: '#1e1e1e',
-  forest: '#f4f4f4',
-  neutral: '#ffffff',
-  vibrant: '#1a1a1a',
-  print: '#ffffff'
-};
-
 function getPngBlob(cb){
   const svg=$('svg',output);if(!svg)return alert('Nothing to export!');
   const clone=svg.cloneNode(true);clone.style.transform='';
@@ -343,4 +347,5 @@ if (saved !== null && saved.trim()) {
   D --> E`;
 }
 
+updateDiagramBackground();
 render();
