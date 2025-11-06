@@ -3,8 +3,20 @@ html,body{margin:0;height:100%;font-family:system-ui,sans-serif;background:#fafa
 body{display:grid;grid-template-rows:auto 1fr}
 button,select{padding:.35rem .8rem;font-size:1rem;cursor:pointer}
 #dims{font-size:.9rem;color:#444;margin-left:.5rem}
-#editor{height:200px;width:100%;resize:vertical;border:none;border-bottom:1px solid #ccc;padding:1rem;font-family:Consolas,monospace;box-sizing:border-box}
-#diagram{overflow:auto;padding:1rem}
+
+/* Split pane container */
+#splitContainer{display:flex;flex-direction:column;height:100%;overflow:hidden}
+
+/* Editor - flexible size */
+#editor{flex:0 0 200px;width:100%;resize:none;border:none;padding:1rem;font-family:Consolas,monospace;box-sizing:border-box;overflow:auto}
+
+/* Divider */
+#divider{flex:0 0 6px;background:#ccc;cursor:row-resize;position:relative;transition:background .2s}
+#divider:hover{background:#aaa}
+#divider:active{background:#999}
+
+/* Diagram - takes remaining space */
+#diagram{flex:1 1 auto;overflow:auto;padding:1rem}
 #diagram svg{transform-origin:top left}
 #toolbar {
   display: flex;

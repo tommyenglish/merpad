@@ -51,6 +51,7 @@ applyConfig();
 const $=q=>document.querySelector(q);
 const editor=$('#editor'),output=$('#diagram');
 const themeSel=$('#themeSelect'),layoutSel=$('#layoutSelect'),dims=$('#dims');
+const divider=$('#divider'),splitContainer=$('#splitContainer');
 
 /* ========= Helpers ========= */
 function updateDims(){
@@ -64,6 +65,52 @@ function applyZoom(){
   if(svg) svg.style.transform=`scale(${zoom})`;
   updateDims();
 }
+
+/* ========= Resizable divider ========= */
+const SPLIT_KEY = 'merpad-split-position';
+let isDragging = false;
+
+// Restore saved split position
+const savedSplit = localStorage.getItem(SPLIT_KEY);
+if (savedSplit) {
+  editor.style.flexBasis = savedSplit + 'px';
+}
+
+divider.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  e.preventDefault();
+  document.body.style.userSelect = 'none';
+  document.body.style.cursor = 'row-resize';
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+
+  const containerRect = splitContainer.getBoundingClientRect();
+  const newEditorHeight = e.clientY - containerRect.top;
+
+  // Constrain to reasonable min/max values
+  const minHeight = 100;
+  const maxHeight = containerRect.height - 100; // leave at least 100px for diagram
+
+  if (newEditorHeight >= minHeight && newEditorHeight <= maxHeight) {
+    editor.style.flexBasis = newEditorHeight + 'px';
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  if (isDragging) {
+    isDragging = false;
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+
+    // Save the current split position
+    const currentHeight = parseInt(editor.style.flexBasis);
+    if (!isNaN(currentHeight)) {
+      localStorage.setItem(SPLIT_KEY, currentHeight);
+    }
+  }
+});
 
 /* ========= Render ========= */
 async function render(){
