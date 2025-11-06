@@ -44,25 +44,23 @@ No Node? You'll need Node just for the initial `npm install`, then you can use a
 
 | Action     | How                                                          |
 | ---------- | ------------------------------------------------------------ |
-| **Render** | Click **Render** or press **Ctrl + Enter**.                  |
-| **Save**   | **Save** overwrites the opened file, or prompts if you haven't saved yet. |
+| **Render** | Diagrams auto-render as you type (with 400ms debounce). No manual render needed. |
+| **Save**   | **Save…** prompts for file location using the native file picker (or downloads if unsupported). |
 | **Open…**  | Choose a local `.mmd` / `.txt` file and Merpad re‑renders immediately. |
-| **Export** | **SVG** & **PNG** buttons download; **Copy** puts PNG on your clipboard. |
+| **Export** | **SVG…** & **PNG…** buttons prompt for save location; **Copy PNG** puts PNG on your clipboard. |
 | **Zoom**   | `＋` / `−` / **100 %**. Size label shows export dimensions.  |
-
-Keyboard shortcuts are listed in the **?** menu in the viewer.
+| **Layout** | Toggle between horizontal/vertical split with the **⇄** button. |
 
 ---
 
 ## 🛠️ Development scripts
 
 ```bash
-npm run dev       # python http.server + open browser
-npm run copy      # copy .mjs entries + chunks into public/
-npm run build     # optional: rollup into single merpad.bundle.js
+npm run dev       # runs npm run copy, then starts python http.server on port 8000
+npm run copy      # copies .mjs entries + chunks from node_modules into public/
 ```
 
-Viewer logic lives in `viewer.js`, styles in `viewer.css`.
+Viewer logic lives in `public/viewer.js`, styles in `public/viewer.css`.
 
 ---
 
