@@ -139,10 +139,35 @@ const download=(blob,name)=>{
   const a=Object.assign(document.createElement('a'),{href:url,download:name});
   document.body.append(a);a.click();a.remove();URL.revokeObjectURL(url);
 };
-$('#btnSvg').onclick=()=>{
+$('#btnSvg').onclick=async ()=>{
   const svg=$('svg',output);if(!svg)return alert('Nothing to export!');
-  download(new Blob([new XMLSerializer().serializeToString(svg)],
-    {type:'image/svg+xml'}),'diagram.svg');
+  const svgString = new XMLSerializer().serializeToString(svg);
+  const blob = new Blob([svgString], {type:'image/svg+xml'});
+
+  // Try to use File System Access API for save dialog
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: 'diagram.svg',
+        types: [{
+          description: 'SVG Image',
+          accept: {'image/svg+xml': ['.svg']}
+        }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+    } catch (err) {
+      // User cancelled or error occurred
+      if (err.name !== 'AbortError') {
+        console.error('Save failed:', err);
+        alert('Save failed: ' + err.message);
+      }
+    }
+  } else {
+    // Fallback to instant download for unsupported browsers
+    download(blob, 'diagram.svg');
+  }
 };
 $('#btnPng').onclick=()=>getPngBlob(b=>download(b,'diagram.png'));
 $('#btnCopy').onclick=()=>{
