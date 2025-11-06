@@ -32,6 +32,17 @@ let currentLayout='dagre';
 let zoom=1;
 let orientation='horizontal'; // 'vertical' or 'horizontal'
 
+/* ========= Theme backgrounds ========= */
+// Define background colors for each theme
+const themeBackgrounds = {
+  default: '#ffffff',
+  dark: '#1e1e1e',
+  forest: '#f4f4f4',
+  neutral: '#ffffff',
+  vibrant: '#1a1a1a',
+  print: '#ffffff'
+};
+
 /* ========= Apply mermaid config ========= */
 function applyConfig(){
   const cfg=structuredClone(themes[currentTheme]);
@@ -66,6 +77,9 @@ function applyZoom(){
   const svg=$('svg',output);
   if(svg) svg.style.transform=`scale(${zoom})`;
   updateDims();
+}
+function updateDiagramBackground(){
+  output.style.backgroundColor=themeBackgrounds[currentTheme]||'#ffffff';
 }
 
 /* ========= Resizable divider ========= */
@@ -186,7 +200,7 @@ editor.addEventListener('input', e => {
 
 themeSel.value=currentTheme;
 layoutSel.value=currentLayout;
-themeSel.onchange=()=>{currentTheme=themeSel.value;applyConfig();render();};
+themeSel.onchange=()=>{currentTheme=themeSel.value;applyConfig();updateDiagramBackground();render();};
 layoutSel.onchange=()=>{currentLayout=layoutSel.value;applyConfig();render();};
 
 /* ----- Save .mmd ----- */
@@ -240,7 +254,11 @@ function getPngBlob(cb){
   const img=new Image();img.crossOrigin='anonymous';
   img.onload=()=>{
     const canvas=Object.assign(document.createElement('canvas'),{width:sw,height:sh});
-    canvas.getContext('2d').drawImage(img,0,0,sw,sh);
+    const ctx=canvas.getContext('2d');
+    // Fill background with theme-appropriate color
+    ctx.fillStyle=themeBackgrounds[currentTheme]||'#ffffff';
+    ctx.fillRect(0,0,sw,sh);
+    ctx.drawImage(img,0,0,sw,sh);
     canvas.toBlob(cb,'image/png');
   };img.src=data;
 }
@@ -329,4 +347,5 @@ if (saved !== null && saved.trim()) {
   D --> E`;
 }
 
+updateDiagramBackground();
 render();
