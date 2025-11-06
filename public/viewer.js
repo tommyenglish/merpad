@@ -30,6 +30,7 @@ const DEBOUNCE = 400; // ms to wait after last keystroke
 let currentTheme='print';
 let currentLayout='dagre';
 let zoom=1;
+let orientation='vertical'; // 'vertical' or 'horizontal'
 
 /* ========= Apply mermaid config ========= */
 function applyConfig(){
@@ -52,6 +53,7 @@ const $=q=>document.querySelector(q);
 const editor=$('#editor'),output=$('#diagram');
 const themeSel=$('#themeSelect'),layoutSel=$('#layoutSelect'),dims=$('#dims');
 const divider=$('#divider'),splitContainer=$('#splitContainer');
+const layoutToggle=$('#layoutToggle');
 
 /* ========= Helpers ========= */
 function updateDims(){
@@ -67,34 +69,72 @@ function applyZoom(){
 }
 
 /* ========= Resizable divider ========= */
-const SPLIT_KEY = 'merpad-split-position';
+const SPLIT_VERTICAL_KEY = 'merpad-split-vertical';
+const SPLIT_HORIZONTAL_KEY = 'merpad-split-horizontal';
+const ORIENTATION_KEY = 'merpad-orientation';
 let isDragging = false;
 
-// Restore saved split position
-const savedSplit = localStorage.getItem(SPLIT_KEY);
-if (savedSplit) {
-  editor.style.flexBasis = savedSplit + 'px';
+// Restore saved orientation
+const savedOrientation = localStorage.getItem(ORIENTATION_KEY);
+if (savedOrientation && (savedOrientation === 'vertical' || savedOrientation === 'horizontal')) {
+  orientation = savedOrientation;
 }
+splitContainer.classList.add(orientation);
+
+// Restore saved split position
+function restoreSplitPosition() {
+  const key = orientation === 'vertical' ? SPLIT_VERTICAL_KEY : SPLIT_HORIZONTAL_KEY;
+  const savedSplit = localStorage.getItem(key);
+  if (savedSplit) {
+    editor.style.flexBasis = savedSplit + 'px';
+  } else {
+    // Reset to default
+    editor.style.flexBasis = orientation === 'vertical' ? '200px' : '50%';
+  }
+}
+restoreSplitPosition();
+
+// Toggle layout orientation
+layoutToggle.onclick = () => {
+  // Remove current class and toggle orientation
+  splitContainer.classList.remove(orientation);
+  orientation = orientation === 'vertical' ? 'horizontal' : 'vertical';
+  splitContainer.classList.add(orientation);
+
+  // Save orientation preference
+  localStorage.setItem(ORIENTATION_KEY, orientation);
+
+  // Restore split position for new orientation
+  restoreSplitPosition();
+};
 
 divider.addEventListener('mousedown', (e) => {
   isDragging = true;
   e.preventDefault();
   document.body.style.userSelect = 'none';
-  document.body.style.cursor = 'row-resize';
+  document.body.style.cursor = orientation === 'vertical' ? 'row-resize' : 'col-resize';
 });
 
 document.addEventListener('mousemove', (e) => {
   if (!isDragging) return;
 
   const containerRect = splitContainer.getBoundingClientRect();
-  const newEditorHeight = e.clientY - containerRect.top;
+  const minSize = 100;
 
-  // Constrain to reasonable min/max values
-  const minHeight = 100;
-  const maxHeight = containerRect.height - 100; // leave at least 100px for diagram
+  if (orientation === 'vertical') {
+    const newEditorHeight = e.clientY - containerRect.top;
+    const maxHeight = containerRect.height - minSize;
 
-  if (newEditorHeight >= minHeight && newEditorHeight <= maxHeight) {
-    editor.style.flexBasis = newEditorHeight + 'px';
+    if (newEditorHeight >= minSize && newEditorHeight <= maxHeight) {
+      editor.style.flexBasis = newEditorHeight + 'px';
+    }
+  } else {
+    const newEditorWidth = e.clientX - containerRect.left;
+    const maxWidth = containerRect.width - minSize;
+
+    if (newEditorWidth >= minSize && newEditorWidth <= maxWidth) {
+      editor.style.flexBasis = newEditorWidth + 'px';
+    }
   }
 });
 
@@ -104,10 +144,11 @@ document.addEventListener('mouseup', () => {
     document.body.style.userSelect = '';
     document.body.style.cursor = '';
 
-    // Save the current split position
-    const currentHeight = parseInt(editor.style.flexBasis);
-    if (!isNaN(currentHeight)) {
-      localStorage.setItem(SPLIT_KEY, currentHeight);
+    // Save the current split position for current orientation
+    const currentSize = parseInt(editor.style.flexBasis);
+    if (!isNaN(currentSize)) {
+      const key = orientation === 'vertical' ? SPLIT_VERTICAL_KEY : SPLIT_HORIZONTAL_KEY;
+      localStorage.setItem(key, currentSize);
     }
   }
 });

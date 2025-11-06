@@ -5,13 +5,23 @@ button,select{padding:.35rem .8rem;font-size:1rem;cursor:pointer}
 #dims{font-size:.9rem;color:#444;margin-left:.5rem}
 
 /* Split pane container */
-#splitContainer{display:flex;flex-direction:column;height:100%;overflow:hidden}
+#splitContainer{display:flex;height:100%;overflow:hidden}
+
+/* Vertical layout (default - top/bottom) */
+#splitContainer.vertical{flex-direction:column}
+#splitContainer.vertical #editor{flex:0 0 200px;width:100%;height:auto}
+#splitContainer.vertical #divider{flex:0 0 6px;width:100%;height:6px;cursor:row-resize}
+
+/* Horizontal layout (side by side) */
+#splitContainer.horizontal{flex-direction:row}
+#splitContainer.horizontal #editor{flex:0 0 50%;width:auto;height:100%}
+#splitContainer.horizontal #divider{flex:0 0 6px;width:6px;height:100%;cursor:col-resize}
 
 /* Editor - flexible size */
-#editor{flex:0 0 200px;width:100%;resize:none;border:none;padding:1rem;font-family:Consolas,monospace;box-sizing:border-box;overflow:auto}
+#editor{resize:none;border:none;padding:1rem;font-family:Consolas,monospace;box-sizing:border-box;overflow:auto}
 
 /* Divider */
-#divider{flex:0 0 6px;background:#ccc;cursor:row-resize;position:relative;transition:background .2s}
+#divider{background:#ccc;position:relative;transition:background .2s}
 #divider:hover{background:#aaa}
 #divider:active{background:#999}
 
