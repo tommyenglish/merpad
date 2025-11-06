@@ -230,6 +230,16 @@ fileInput.onchange=()=>{
 };
 
 /* ----- PNG / SVG / Copy helpers ----- */
+// Define background colors for each theme
+const themeBackgrounds = {
+  default: '#ffffff',
+  dark: '#1e1e1e',
+  forest: '#f4f4f4',
+  neutral: '#ffffff',
+  vibrant: '#1a1a1a',
+  print: '#ffffff'
+};
+
 function getPngBlob(cb){
   const svg=$('svg',output);if(!svg)return alert('Nothing to export!');
   const clone=svg.cloneNode(true);clone.style.transform='';
@@ -240,7 +250,11 @@ function getPngBlob(cb){
   const img=new Image();img.crossOrigin='anonymous';
   img.onload=()=>{
     const canvas=Object.assign(document.createElement('canvas'),{width:sw,height:sh});
-    canvas.getContext('2d').drawImage(img,0,0,sw,sh);
+    const ctx=canvas.getContext('2d');
+    // Fill background with theme-appropriate color
+    ctx.fillStyle=themeBackgrounds[currentTheme]||'#ffffff';
+    ctx.fillRect(0,0,sw,sh);
+    ctx.drawImage(img,0,0,sw,sh);
     canvas.toBlob(cb,'image/png');
   };img.src=data;
 }
