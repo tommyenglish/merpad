@@ -167,14 +167,201 @@ document.addEventListener('mouseup', () => {
   }
 });
 
+/* ========= Error Handling Helpers ========= */
+
+// Parse error message to extract line and column information
+function parseErrorLocation(errorMessage) {
+  // Try different patterns that Mermaid might use
+  const patterns = [
+    /line (\d+)/i,
+    /at line (\d+)/i,
+    /on line (\d+)/i,
+    /\((\d+):/,  // (line:col) format
+    /Parse error on line (\d+)/i
+  ];
+
+  let line = null;
+  let column = null;
+
+  for (const pattern of patterns) {
+    const match = errorMessage.match(pattern);
+    if (match) {
+      line = parseInt(match[1], 10);
+      break;
+    }
+  }
+
+  // Try to find column number
+  const colPatterns = [
+    /column (\d+)/i,
+    /col (\d+)/i,
+    /:(\d+):/,  // :line:col: format
+    /\((\d+):(\d+)\)/  // (line:col) format
+  ];
+
+  for (const pattern of colPatterns) {
+    const match = errorMessage.match(pattern);
+    if (match) {
+      column = parseInt(match[match.length - 1], 10);
+      break;
+    }
+  }
+
+  return { line, column };
+}
+
+// Provide helpful, user-friendly error suggestions
+function getHelpfulMessage(errorMessage) {
+  const msg = errorMessage.toLowerCase();
+
+  // Common Mermaid syntax errors and helpful guidance
+  const errorGuides = [
+    {
+      pattern: /expecting|expected/,
+      message: "Check that all diagram elements have the correct syntax. Make sure arrows, brackets, and keywords are properly formatted.",
+      example: "Example: Use --> for arrows, [] for rectangles, {} for decisions"
+    },
+    {
+      pattern: /unexpected/,
+      message: "There's an unexpected character or keyword. Review the line for typos or incorrect syntax.",
+      example: "Tip: Make sure quotes match and special characters are used correctly"
+    },
+    {
+      pattern: /parse error|syntax error/,
+      message: "The diagram syntax doesn't match what Mermaid expects. Double-check your diagram type and structure.",
+      example: "Example: Start with 'flowchart TD' or 'sequenceDiagram' or other valid diagram types"
+    },
+    {
+      pattern: /lexical error/,
+      message: "There's an invalid character or incomplete statement. Look for unfinished quotes, brackets, or special characters.",
+      example: "Tip: Check that all opening brackets have closing brackets"
+    },
+    {
+      pattern: /unknown.*type|invalid.*type/,
+      message: "The diagram type might be misspelled or not supported.",
+      example: "Common types: flowchart, sequenceDiagram, classDiagram, gantt, pie, gitGraph"
+    },
+    {
+      pattern: /undefined/,
+      message: "You're referencing something that hasn't been defined yet. Make sure all node IDs are created before being used.",
+      example: "Tip: Define nodes before connecting them with arrows"
+    },
+    {
+      pattern: /bracket|brace|parenthes/,
+      message: "There's a mismatch with brackets, braces, or parentheses. Make sure they're properly opened and closed.",
+      example: "Tip: Count your opening [ ( { and closing } ) ] to make sure they match"
+    }
+  ];
+
+  for (const guide of errorGuides) {
+    if (guide.pattern.test(msg)) {
+      return guide;
+    }
+  }
+
+  // Default helpful message
+  return {
+    message: "There's a problem with the diagram syntax. Review the highlighted area and check the Mermaid documentation.",
+    example: "Tip: Start simple and build up - test each part as you add it"
+  };
+}
+
+// Highlight error line in the editor
+function highlightErrorLine(lineNumber) {
+  // Clear any existing highlights
+  clearErrorHighlight();
+
+  if (!lineNumber) return;
+
+  const lines = editor.value.split('\n');
+  if (lineNumber < 1 || lineNumber > lines.length) return;
+
+  // Calculate the character position of the error line
+  let charPosition = 0;
+  for (let i = 0; i < lineNumber - 1; i++) {
+    charPosition += lines[i].length + 1; // +1 for newline
+  }
+
+  // Scroll to the line
+  editor.focus();
+  editor.setSelectionRange(charPosition, charPosition + lines[lineNumber - 1].length);
+  editor.scrollTop = Math.max(0, (lineNumber - 3) * 20); // Approximate line height
+
+  // Store error line for visual indication (if we want to add background color later)
+  editor.dataset.errorLine = lineNumber;
+}
+
+// Clear error highlighting
+function clearErrorHighlight() {
+  delete editor.dataset.errorLine;
+  // Remove selection
+  editor.setSelectionRange(0, 0);
+}
+
+// Generate error panel HTML
+function createErrorPanel(error) {
+  const { line, column } = parseErrorLocation(error.message);
+  const helpGuide = getHelpfulMessage(error.message);
+
+  let locationHTML = '';
+  if (line) {
+    locationHTML = `<div class="error-location">
+      Line ${line}${column ? `, Column ${column}` : ''}
+    </div>`;
+  }
+
+  const errorHTML = `
+    <div class="error-panel">
+      <div class="error-header">
+        <span class="error-icon">⚠️</span>
+        <span>Diagram Error</span>
+      </div>
+      ${locationHTML}
+      <div class="error-message">${error.message}</div>
+      <div class="error-help">
+        <strong>💡 How to fix this:</strong>
+        ${helpGuide.message}
+        ${helpGuide.example ? `<br><br><em>${helpGuide.example}</em>` : ''}
+      </div>
+      <div class="error-actions">
+        ${line ? `<button class="error-button error-button-primary" onclick="highlightErrorLine(${line})">Go to Line ${line}</button>` : ''}
+        <a href="https://mermaid.js.org/intro/syntax-reference.html" target="_blank" class="error-button error-button-secondary">View Mermaid Syntax Guide</a>
+      </div>
+    </div>
+  `;
+
+  return errorHTML;
+}
+
+// Make highlightErrorLine available globally for button onclick
+window.highlightErrorLine = highlightErrorLine;
+
 /* ========= Render ========= */
 async function render(){
   const code=editor.value.trim();
-  if(!code){output.innerHTML='<em>Nothing to render.</em>';updateDims();return;}
+  if(!code){
+    output.innerHTML='<em>Nothing to render.</em>';
+    clearErrorHighlight();
+    updateDims();
+    return;
+  }
   try{
     const {svg,bindFunctions}=await mermaid.render('mmd-diagram',code);
-    output.innerHTML=svg;bindFunctions?.(output);applyZoom();
-  }catch(e){output.innerHTML=`<pre style="color:red">${e.message}</pre>`;updateDims();}
+    output.innerHTML=svg;
+    bindFunctions?.(output);
+    clearErrorHighlight(); // Clear any previous error highlights on success
+    applyZoom();
+  }catch(e){
+    output.innerHTML=createErrorPanel(e);
+
+    // Auto-highlight the error line if available
+    const { line } = parseErrorLocation(e.message);
+    if (line) {
+      highlightErrorLine(line);
+    }
+
+    updateDims();
+  }
 }
 
 /* ========= Event wiring ========= */

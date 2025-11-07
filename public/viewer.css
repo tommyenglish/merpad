@@ -58,3 +58,110 @@ button,select{padding:.35rem .8rem;font-size:1rem;cursor:pointer}
   margin-left: 0;
   padding-left: 0;
 }
+
+/* Error Panel Styles */
+.error-panel {
+  background: #fff5f5;
+  border: 2px solid #fc8181;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1rem;
+  max-width: 800px;
+  font-family: system-ui, sans-serif;
+  box-shadow: 0 2px 8px rgba(252, 129, 129, 0.15);
+}
+
+.error-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #c53030;
+}
+
+.error-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.error-location {
+  display: inline-block;
+  background: #fed7d7;
+  color: #742a2a;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+}
+
+.error-message {
+  background: white;
+  border-left: 4px solid #fc8181;
+  padding: 1rem;
+  margin: 0.75rem 0;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 0.95rem;
+  color: #2d3748;
+  line-height: 1.5;
+  border-radius: 4px;
+}
+
+.error-help {
+  background: #fff9e6;
+  border: 1px solid #f6e05e;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-top: 1rem;
+  color: #744210;
+}
+
+.error-help strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #975a16;
+}
+
+.error-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.error-button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.2s;
+}
+
+.error-button-primary {
+  background: #4299e1;
+  color: white;
+}
+
+.error-button-primary:hover {
+  background: #3182ce;
+}
+
+.error-button-secondary {
+  background: #e2e8f0;
+  color: #2d3748;
+}
+
+.error-button-secondary:hover {
+  background: #cbd5e0;
+}
+
+/* Editor line highlight for errors */
+.editor-error-line {
+  background-color: rgba(252, 129, 129, 0.15);
+  border-left: 3px solid #fc8181;
+}
