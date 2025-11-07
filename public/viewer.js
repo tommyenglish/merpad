@@ -335,151 +335,183 @@ $('#btnCopy').onclick=()=>{
 /* ========= Templates ========= */
 const templates = {
   flowchart: `flowchart TD
-    A[Start] --> B{Is it sunny?}
-    B -- Yes --> C[Go for a walk]
-    B -- No  --> D[Read a book]
-    C --> E[End]
-    D --> E`,
+    A[Arrive at Hogwarts] --> B{Sorting Hat Decision}
+    B -- Brave --> C[Gryffindor]
+    B -- Cunning --> D[Slytherin]
+    B -- Wise --> E[Ravenclaw]
+    B -- Loyal --> F[Hufflepuff]
+    C --> G[Begin Classes]
+    D --> G
+    E --> G
+    F --> G`,
 
   sequence: `sequenceDiagram
-    participant Client
-    participant API
-    participant Database
+    participant Harry
+    participant Hedwig
+    participant Ron
+    participant Hogwarts
 
-    Client->>API: POST /login
-    activate API
-    API->>Database: Query user
-    activate Database
-    Database-->>API: User data
-    deactivate Database
-    API-->>Client: JWT token
-    deactivate API
+    Harry->>Hedwig: Write letter
+    activate Hedwig
+    Hedwig->>Hogwarts: Fly to Owlery
+    activate Hogwarts
+    Hogwarts->>Ron: Deliver letter
+    activate Ron
+    Ron-->>Hedwig: Write reply
+    deactivate Ron
+    Hedwig-->>Harry: Return with response
+    deactivate Hedwig
+    deactivate Hogwarts
 
-    Client->>API: GET /profile
-    activate API
-    API->>API: Verify token
-    API-->>Client: Profile data
-    deactivate API`,
+    Harry->>Ron: Send another message
+    activate Ron
+    Ron-->>Harry: Quick response via Patronus
+    deactivate Ron`,
 
   gantt: `gantt
-    title Project Timeline
+    title Hogwarts School Year
     dateFormat YYYY-MM-DD
-    section Planning
-    Research           :a1, 2024-01-01, 30d
-    Requirements       :a2, after a1, 20d
-    section Development
-    Backend API        :b1, after a2, 45d
-    Frontend UI        :b2, after a2, 40d
-    Integration        :b3, after b1, 15d
-    section Testing
-    QA Testing         :c1, after b3, 20d
-    Bug Fixes          :c2, after c1, 10d
-    section Launch
-    Deployment         :d1, after c2, 5d`,
+    section First Term
+    Welcome Feast           :a1, 2024-09-01, 7d
+    Defense Against Dark Arts :a2, after a1, 60d
+    Potions Class          :a3, after a1, 60d
+    section Halloween
+    Troll in Dungeon       :b1, 2024-10-31, 1d
+    Saving Hermione        :b2, after b1, 1d
+    section Quidditch
+    First Match            :c1, 2024-11-15, 1d
+    Training Sessions      :c2, 2024-10-01, 90d
+    section Christmas
+    Winter Break           :d1, 2024-12-20, 14d
+    section Final Term
+    Exams Preparation      :e1, 2025-05-01, 30d
+    Final Exams            :e2, after e1, 7d`,
 
   class: `classDiagram
-    class Animal {
+    class Wizard {
         +String name
-        +int age
-        +makeSound()
-        +move()
+        +String house
+        +int magicLevel
+        +castSpell()
+        +brewPotion()
     }
-    class Dog {
-        +String breed
-        +bark()
-        +fetch()
+    class Gryffindor {
+        +String trait = "Brave"
+        +summonPatronus()
+        +defendAgainstDarkArts()
     }
-    class Cat {
-        +Boolean indoor
-        +meow()
-        +scratch()
+    class Slytherin {
+        +String trait = "Cunning"
+        +speakParseltongue()
+        +masterLegilimency()
     }
-    Animal <|-- Dog
-    Animal <|-- Cat
+    class Ravenclaw {
+        +String trait = "Wise"
+        +solveRiddles()
+        +advancedCharms()
+    }
+    Wizard <|-- Gryffindor
+    Wizard <|-- Slytherin
+    Wizard <|-- Ravenclaw
 
-    class Owner {
-        +String name
-        +feedPet()
+    class Wand {
+        +String wood
+        +String core
+        +choosesWizard()
     }
-    Owner "1" --> "*" Animal : owns`,
+    Wizard "1" --> "1" Wand : wields`,
 
   erDiagram: `erDiagram
-    CUSTOMER ||--o{ ORDER : places
-    CUSTOMER {
+    STUDENT ||--o{ ENROLLMENT : enrolls
+    STUDENT {
         string id PK
         string name
-        string email
-        date registered
+        string house
+        int year
+        date birthdate
     }
-    ORDER ||--|{ LINE_ITEM : contains
-    ORDER {
-        string id PK
-        date orderDate
-        string status
-        float total
+    HOUSE ||--|{ STUDENT : belongs_to
+    HOUSE {
+        string name PK
+        string founder
+        string commonRoom
+        int points
     }
-    PRODUCT ||--o{ LINE_ITEM : includes
-    PRODUCT {
+    CLASS ||--|{ ENROLLMENT : has
+    CLASS {
         string id PK
         string name
-        float price
-        int inventory
+        string professor
+        string classroom
     }
-    LINE_ITEM {
-        string orderId FK
-        string productId FK
-        int quantity
-        float subtotal
+    ENROLLMENT {
+        string studentId FK
+        string classId FK
+        string grade
+        int attendance
+    }
+    HOUSE ||--o{ QUIDDITCH_TEAM : fields
+    QUIDDITCH_TEAM {
+        string houseId FK
+        string captain
+        int wins
     }`,
 
   state: `stateDiagram-v2
-    [*] --> Idle
-    Idle --> Loading : Start
-    Loading --> Success : Data Loaded
-    Loading --> Error : Load Failed
-    Success --> Idle : Reset
-    Error --> Loading : Retry
-    Error --> Idle : Cancel
-    Success --> [*]`,
+    [*] --> Muggle
+    Muggle --> HogwartsLetter : Turn 11
+    HogwartsLetter --> DiagonAlley : Accept Letter
+    DiagonAlley --> Platform9_3_4 : Buy Supplies
+    Platform9_3_4 --> HogwartsExpress : Board Train
+    HogwartsExpress --> GreatHall : Arrive
+    GreatHall --> Sorted : Sorting Ceremony
+    Sorted --> Student : Join House
+    Student --> Graduated : Complete 7 Years
+    Graduated --> [*]`,
 
-  pie: `pie title Browser Market Share 2024
-    "Chrome" : 65
-    "Safari" : 18
-    "Edge" : 8
-    "Firefox" : 6
-    "Other" : 3`,
+  pie: `pie title House Points Championship
+    "Gryffindor" : 482
+    "Slytherin" : 472
+    "Ravenclaw" : 426
+    "Hufflepuff" : 352`,
 
   gitGraph: `gitGraph
-    commit id: "Initial commit"
-    commit id: "Add features"
-    branch develop
-    checkout develop
-    commit id: "Start development"
-    commit id: "Add login"
+    commit id: "Sorcerer's Stone"
+    commit id: "Meet Hagrid"
+    branch year2
+    checkout year2
+    commit id: "Chamber of Secrets"
+    commit id: "Basilisk defeated"
     checkout main
-    merge develop
-    commit id: "Release v1.0"
-    branch hotfix
-    checkout hotfix
-    commit id: "Fix critical bug"
+    merge year2
+    commit id: "Prisoner of Azkaban"
+    branch timeturner
+    checkout timeturner
+    commit id: "Save Buckbeak"
+    commit id: "Save Sirius"
     checkout main
-    merge hotfix tag: "v1.0.1"`,
+    merge timeturner tag: "Time-Turner-Fixed"
+    commit id: "Goblet of Fire"
+    commit id: "Triwizard Tournament"`,
 
   journey: `journey
-    title User Journey: Online Shopping
-    section Browse
-      Visit website: 5: Customer
-      Search products: 4: Customer
-      View details: 3: Customer
-    section Purchase
-      Add to cart: 4: Customer
-      Review cart: 3: Customer
-      Enter shipping: 2: Customer, System
-      Payment: 2: Customer, Payment Gateway
-    section Post-Purchase
-      Order confirmation: 5: Customer, System
-      Track shipment: 4: Customer
-      Receive product: 5: Customer`
+    title Harry's First Year at Hogwarts
+    section Arrival
+      Board Hogwarts Express: 5: Harry, Ron, Hermione
+      Cross the Lake: 4: Harry, First Years
+      Sorting Ceremony: 3: Harry, Sorting Hat
+    section Learning Magic
+      First Potions Class: 2: Harry, Snape
+      Flying Lessons: 5: Harry, Madam Hooch
+      Defense Against Dark Arts: 4: Harry, Professor
+    section Adventures
+      Troll in Dungeon: 3: Harry, Ron, Hermione
+      First Quidditch Match: 5: Harry, Team
+      Forbidden Forest: 2: Harry, Detention
+    section Final Challenge
+      Through the Trapdoor: 3: Harry, Ron, Hermione
+      Defeat Voldemort: 4: Harry
+      House Cup Victory: 5: Harry, Gryffindor`
 };
 
 /* ========= Template selector ========= */
