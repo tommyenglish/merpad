@@ -32,6 +32,7 @@ let currentLayout='dagre';
 let zoom=1;
 let orientation='horizontal'; // 'vertical' or 'horizontal'
 let undoStack = []; // Stack for undo functionality
+let lastSavedContent = ''; // Track last saved content to avoid duplicates
 
 /* ========= Theme backgrounds ========= */
 // Define background colors for each theme
@@ -59,6 +60,22 @@ function applyConfig(){
   mermaid.initialize(cfg);
 }
 applyConfig();
+
+/* ========= Undo helper ========= */
+function saveToUndoStack() {
+  const currentContent = editor.value.trim();
+  // Only save if content has changed and is not empty
+  if (currentContent && currentContent !== lastSavedContent) {
+    undoStack.push(currentContent);
+    lastSavedContent = currentContent;
+    // Limit undo stack to 20 items
+    if (undoStack.length > 20) {
+      undoStack.shift();
+    }
+    // Enable undo button
+    $('#btnUndo').disabled = false;
+  }
+}
 
 /* ========= DOM refs ========= */
 const $=q=>document.querySelector(q);
@@ -184,19 +201,32 @@ $('#zoomOut').onclick=()=>{zoom/=1.25;applyZoom();};
 $('#zoomReset').onclick=()=>{zoom=1;applyZoom();};
 
 let pending;
+let undoPending;
 editor.addEventListener('input', e => {
   clearTimeout(pending);
+  clearTimeout(undoPending);
+
   pending = setTimeout(() => {
     const isWhitespaceOnly =
       (e.data && /^[ \t\n\r]$/.test(e.data)) ||  // normal typing
       (e.inputType === 'insertParagraph') ||     // Enter on some browsers
       (e.inputType === 'insertLineBreak');       // Shift+Enter
-	
+
     if (!isWhitespaceOnly) {
       render();                                    // auto‑render
       localStorage.setItem(LS_KEY, editor.value);  // auto‑save
 	}
   }, DEBOUNCE);
+
+  // Save to undo stack after 2 seconds of inactivity
+  undoPending = setTimeout(() => {
+    saveToUndoStack();
+  }, 2000);
+});
+
+// Save to undo stack when editor loses focus
+editor.addEventListener('blur', () => {
+  saveToUndoStack();
 });
 
 themeSel.value=currentTheme;
@@ -239,6 +269,8 @@ const fileInput=$('#fileOpen');
 $('#btnOpen').onclick=()=>fileInput.click();
 fileInput.onchange=()=>{
   const file=fileInput.files[0];if(!file)return;
+  // Save current state before opening new file
+  saveToUndoStack();
   const r=new FileReader();
   r.onload=e=>{editor.value=e.target.result;render();};
   r.readAsText(file,'utf-8');
@@ -546,16 +578,8 @@ templateMenu.querySelectorAll('.template-item').forEach(item => {
   item.onclick = () => {
     const templateName = item.dataset.template;
     if (templates[templateName]) {
-      // Save current diagram to undo stack
-      if (editor.value.trim()) {
-        undoStack.push(editor.value);
-        // Limit undo stack to 10 items
-        if (undoStack.length > 10) {
-          undoStack.shift();
-        }
-        // Enable undo button
-        $('#btnUndo').disabled = false;
-      }
+      // Save current diagram to undo stack before loading template
+      saveToUndoStack();
       // Load template
       editor.value = templates[templateName];
       localStorage.setItem(LS_KEY, editor.value);
@@ -569,6 +593,7 @@ templateMenu.querySelectorAll('.template-item').forEach(item => {
 $('#btnUndo').onclick = () => {
   if (undoStack.length > 0) {
     editor.value = undoStack.pop();
+    lastSavedContent = editor.value.trim(); // Update lastSaved to prevent re-saving same content
     localStorage.setItem(LS_KEY, editor.value);
     render();
     // Disable undo button if stack is empty
