@@ -83,8 +83,7 @@ button,select{padding:.35rem .8rem;font-size:1rem;cursor:pointer}
   padding:0.5rem;
   border:0;
   background:transparent;
-  white-space:pre-wrap;
-  word-wrap:break-word;
+  white-space:pre;
   pointer-events:none;
   font:inherit;
   line-height:inherit;
@@ -112,8 +111,7 @@ button,select{padding:.35rem .8rem;font-size:1rem;cursor:pointer}
   background:transparent;
   color:transparent;
   resize:none;
-  white-space:pre-wrap;
-  word-wrap:break-word;
+  white-space:pre;
   font:inherit;
   line-height:inherit;
   caret-color:#000;
