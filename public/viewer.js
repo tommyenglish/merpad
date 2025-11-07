@@ -75,7 +75,21 @@ function updateDims(){
 }
 function applyZoom(){
   const svg=$('svg',output);
-  if(svg) svg.style.transform=`scale(${zoom})`;
+  if(!svg) return;
+
+  // Get the natural size of the SVG
+  const bbox=svg.getBBox();
+  const {width,height,x,y}=bbox;
+
+  // Apply zoom by adjusting width/height and viewBox
+  // This ensures the container recognizes the scrollable area for pan mode
+  const scaledWidth = width * zoom;
+  const scaledHeight = height * zoom;
+
+  svg.setAttribute('width', scaledWidth);
+  svg.setAttribute('height', scaledHeight);
+  svg.setAttribute('viewBox', `${x} ${y} ${width} ${height}`);
+
   updateDims();
 }
 function updateDiagramBackground(){
