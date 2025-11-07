@@ -32,8 +32,6 @@ let currentTheme='print';
 let currentLayout='dagre';
 let zoom=1;
 let orientation='horizontal'; // 'vertical' or 'horizontal'
-let undoStack = []; // Stack for undo functionality
-let lastSavedContent = ''; // Track last saved content to avoid duplicates
 let tabs = []; // Array of tab objects {id, name, content}
 let activeTabId = null; // Currently active tab ID
 let nextTabId = 1; // Counter for tab IDs
@@ -64,22 +62,6 @@ function applyConfig(){
   mermaid.initialize(cfg);
 }
 applyConfig();
-
-/* ========= Undo helper ========= */
-function saveToUndoStack() {
-  const currentContent = editor.value.trim();
-  // Only save if content has changed and is not empty
-  if (currentContent && currentContent !== lastSavedContent) {
-    undoStack.push(currentContent);
-    lastSavedContent = currentContent;
-    // Limit undo stack to 20 items
-    if (undoStack.length > 20) {
-      undoStack.shift();
-    }
-    // Enable undo button
-    $('#btnUndo').disabled = false;
-  }
-}
 
 /* ========= DOM refs ========= */
 const $=q=>document.querySelector(q);
@@ -208,10 +190,8 @@ $('#zoomOut').onclick=()=>{zoom/=1.25;applyZoom();};
 $('#zoomReset').onclick=()=>{zoom=1;applyZoom();};
 
 let pending;
-let undoPending;
 editor.addEventListener('input', e => {
   clearTimeout(pending);
-  clearTimeout(undoPending);
 
   pending = setTimeout(() => {
     const isWhitespaceOnly =
@@ -224,16 +204,6 @@ editor.addEventListener('input', e => {
       saveCurrentTab(); // auto‑save tab
 	}
   }, DEBOUNCE);
-
-  // Save to undo stack after 2 seconds of inactivity
-  undoPending = setTimeout(() => {
-    saveToUndoStack();
-  }, 2000);
-});
-
-// Save to undo stack when editor loses focus
-editor.addEventListener('blur', () => {
-  saveToUndoStack();
 });
 
 themeSel.value=currentTheme;
@@ -263,6 +233,13 @@ $('#btnSave').onclick=async ()=>{
       const writable = await handle.createWritable();
       await writable.write(blob);
       await writable.close();
+
+      // Update tab name with saved filename
+      if (tab && handle.name) {
+        tab.name = handle.name.replace(/\.mmd$/, '');
+        saveTabs();
+        renderTabs();
+      }
     } catch (err) {
       // User cancelled or error occurred
       if (err.name !== 'AbortError') {
@@ -280,8 +257,6 @@ const fileInput=$('#fileOpen');
 $('#btnOpen').onclick=()=>fileInput.click();
 fileInput.onchange=()=>{
   const file=fileInput.files[0];if(!file)return;
-  // Save current state before opening new file
-  saveToUndoStack();
 
   // Create new tab if current tab has content
   if (editor.value.trim()) {
@@ -638,7 +613,6 @@ function switchToTab(tabId) {
   const tab = tabs.find(t => t.id === tabId);
   if (tab) {
     editor.value = tab.content;
-    lastSavedContent = tab.content.trim();
     renderTabs();
     render();
 
@@ -659,7 +633,6 @@ function createNewTab(showPicker = true) {
   tabs.push(newTab);
   activeTabId = newTab.id;
   editor.value = '';
-  lastSavedContent = '';
   saveTabs();
   renderTabs();
 
@@ -719,20 +692,6 @@ templatePicker.querySelectorAll('.template-card').forEach(card => {
 $('#btnSkipTemplate').onclick = () => {
   templatePicker.classList.add('hidden');
   editor.focus();
-};
-
-/* ========= Undo functionality ========= */
-$('#btnUndo').onclick = () => {
-  if (undoStack.length > 0) {
-    editor.value = undoStack.pop();
-    lastSavedContent = editor.value.trim(); // Update lastSaved to prevent re-saving same content
-    localStorage.setItem(LS_KEY, editor.value);
-    render();
-    // Disable undo button if stack is empty
-    if (undoStack.length === 0) {
-      $('#btnUndo').disabled = true;
-    }
-  }
 };
 
 /* ========= Initialize ========= */
