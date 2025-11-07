@@ -32,7 +32,7 @@ let currentTheme='print';
 let currentLayout='dagre';
 let zoom=1;
 let orientation='horizontal'; // 'vertical' or 'horizontal'
-let tabs = []; // Array of tab objects {id, name, content}
+let tabs = []; // Array of tab objects {id, name, content, modified}
 let activeTabId = null; // Currently active tab ID
 let nextTabId = 1; // Counter for tab IDs
 
@@ -201,6 +201,14 @@ editor.addEventListener('input', e => {
 
     if (!isWhitespaceOnly) {
       render();         // auto‑render
+
+      // Mark tab as modified
+      const tab = tabs.find(t => t.id === activeTabId);
+      if (tab && !tab.modified) {
+        tab.modified = true;
+        renderTabs();
+      }
+
       saveCurrentTab(); // auto‑save tab
 	}
   }, DEBOUNCE);
@@ -234,9 +242,10 @@ $('#btnSave').onclick=async ()=>{
       await writable.write(blob);
       await writable.close();
 
-      // Update tab name with saved filename
+      // Update tab name with saved filename and clear modified flag
       if (tab && handle.name) {
         tab.name = handle.name.replace(/\.mmd$/, '');
+        tab.modified = false;
         saveTabs();
         renderTabs();
       }
@@ -270,6 +279,7 @@ fileInput.onchange=()=>{
     if (tab) {
       tab.name = file.name.replace(/\.mmd$/, '');
       tab.content = e.target.result;
+      tab.modified = false; // File just opened, not modified
     }
     saveCurrentTab();
     renderTabs();
@@ -577,6 +587,12 @@ function loadTabs() {
 
   if (savedTabs) {
     tabs = JSON.parse(savedTabs);
+    // Ensure all tabs have a modified flag (backward compatibility)
+    tabs.forEach(tab => {
+      if (tab.modified === undefined) {
+        tab.modified = false;
+      }
+    });
     nextTabId = Math.max(...tabs.map(t => t.id), 0) + 1;
     activeTabId = savedActiveId ? parseInt(savedActiveId) : (tabs[0]?.id || null);
   }
@@ -597,8 +613,9 @@ function renderTabs() {
   tabs.forEach(tab => {
     const tabEl = document.createElement('div');
     tabEl.className = 'tab' + (tab.id === activeTabId ? ' active' : '');
+    const modifiedIndicator = tab.modified ? ' *' : '';
     tabEl.innerHTML = `
-      <span class="tab-name">${tab.name}</span>
+      <span class="tab-name">${tab.name}${modifiedIndicator}</span>
       <span class="tab-close" data-tab-id="${tab.id}">×</span>
     `;
     tabEl.addEventListener('click', (e) => {
@@ -647,7 +664,8 @@ function createNewTab(showPicker = true) {
   const newTab = {
     id: nextTabId++,
     name: `Untitled ${getNextUntitledNumber()}`,
-    content: ''
+    content: '',
+    modified: false
   };
   tabs.push(newTab);
   activeTabId = newTab.id;
@@ -700,8 +718,13 @@ templatePicker.querySelectorAll('.template-card').forEach(card => {
     const templateName = card.dataset.template;
     if (templates[templateName]) {
       editor.value = templates[templateName];
+      const tab = tabs.find(t => t.id === activeTabId);
+      if (tab) {
+        tab.modified = true; // Template selected, needs to be saved
+      }
       saveCurrentTab();
       templatePicker.classList.add('hidden');
+      renderTabs();
       render();
       editor.focus();
     }
