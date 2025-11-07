@@ -110,10 +110,10 @@ button:disabled {
 }
 
 /* Template picker */
-.template-picker{position:absolute;inset:0;background:#fafafa;padding:2rem;overflow:auto;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.template-picker{position:absolute;inset:0;background:#fafafa;padding:2rem;overflow:auto;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
 .template-picker.hidden{display:none}
 .template-picker h3{margin:0 0 1.5rem;font-size:1.25rem;color:#333;text-align:center}
-.template-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1rem;width:100%;max-width:600px;margin-bottom:1.5rem}
+.template-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:1rem;width:100%;max-width:600px;margin-bottom:1.5rem}
 .template-card{background:white;border:2px solid #ddd;border-radius:8px;padding:1.5rem;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0.75rem;transition:all 0.2s}
 .template-card:hover{border-color:#999;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.1)}
 .template-icon{font-size:2rem}
