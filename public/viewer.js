@@ -25,7 +25,8 @@ const themes = {
 };
 
 /* ========= State ========= */
-const LS_KEY = 'merpad-current-diagram';
+const LS_TABS_KEY = 'merpad-tabs';
+const LS_ACTIVE_TAB_KEY = 'merpad-active-tab';
 const DEBOUNCE = 400; // ms to wait after last keystroke
 let currentTheme='print';
 let currentLayout='dagre';
@@ -33,6 +34,9 @@ let zoom=1;
 let orientation='horizontal'; // 'vertical' or 'horizontal'
 let undoStack = []; // Stack for undo functionality
 let lastSavedContent = ''; // Track last saved content to avoid duplicates
+let tabs = []; // Array of tab objects {id, name, content}
+let activeTabId = null; // Currently active tab ID
+let nextTabId = 1; // Counter for tab IDs
 
 /* ========= Theme backgrounds ========= */
 // Define background colors for each theme
@@ -82,7 +86,10 @@ const $=q=>document.querySelector(q);
 const editor=$('#editor'),output=$('#diagram');
 const themeSel=$('#themeSelect'),layoutSel=$('#layoutSelect'),dims=$('#dims');
 const divider=$('#divider'),splitContainer=$('#splitContainer');
+const editorWrapper=$('#editorWrapper');
 const layoutToggle=$('#layoutToggle');
+const tabList=$('#tabList');
+const templatePicker=$('#templatePicker');
 
 /* ========= Helpers ========= */
 function updateDims(){
@@ -118,10 +125,10 @@ function restoreSplitPosition() {
   const key = orientation === 'vertical' ? SPLIT_VERTICAL_KEY : SPLIT_HORIZONTAL_KEY;
   const savedSplit = localStorage.getItem(key);
   if (savedSplit) {
-    editor.style.flexBasis = savedSplit + 'px';
+    editorWrapper.style.flexBasis = savedSplit + 'px';
   } else {
     // Reset to default
-    editor.style.flexBasis = orientation === 'vertical' ? '200px' : '30%';
+    editorWrapper.style.flexBasis = orientation === 'vertical' ? '200px' : '30%';
   }
 }
 restoreSplitPosition();
@@ -158,14 +165,14 @@ document.addEventListener('mousemove', (e) => {
     const maxHeight = containerRect.height - minSize;
 
     if (newEditorHeight >= minSize && newEditorHeight <= maxHeight) {
-      editor.style.flexBasis = newEditorHeight + 'px';
+      editorWrapper.style.flexBasis = newEditorHeight + 'px';
     }
   } else {
     const newEditorWidth = e.clientX - containerRect.left;
     const maxWidth = containerRect.width - minSize;
 
     if (newEditorWidth >= minSize && newEditorWidth <= maxWidth) {
-      editor.style.flexBasis = newEditorWidth + 'px';
+      editorWrapper.style.flexBasis = newEditorWidth + 'px';
     }
   }
 });
@@ -177,7 +184,7 @@ document.addEventListener('mouseup', () => {
     document.body.style.cursor = '';
 
     // Save the current split position for current orientation
-    const currentSize = parseInt(editor.style.flexBasis);
+    const currentSize = parseInt(editorWrapper.style.flexBasis);
     if (!isNaN(currentSize)) {
       const key = orientation === 'vertical' ? SPLIT_VERTICAL_KEY : SPLIT_HORIZONTAL_KEY;
       localStorage.setItem(key, currentSize);
@@ -213,8 +220,8 @@ editor.addEventListener('input', e => {
       (e.inputType === 'insertLineBreak');       // Shift+Enter
 
     if (!isWhitespaceOnly) {
-      render();                                    // auto‑render
-      localStorage.setItem(LS_KEY, editor.value);  // auto‑save
+      render();         // auto‑render
+      saveCurrentTab(); // auto‑save tab
 	}
   }, DEBOUNCE);
 
@@ -239,11 +246,15 @@ $('#btnSave').onclick=async ()=>{
   const text=editor.value;if(!text.trim())return;
   const blob=new Blob([text],{type:'text/plain'});
 
+  // Get suggested filename from tab name
+  const tab = tabs.find(t => t.id === activeTabId);
+  const suggestedName = (tab && tab.name !== `Untitled ${tab.id}` ? tab.name : 'diagram') + '.mmd';
+
   // Try to use File System Access API for save dialog
   if (window.showSaveFilePicker) {
     try {
       const handle = await window.showSaveFilePicker({
-        suggestedName: 'diagram.mmd',
+        suggestedName,
         types: [{
           description: 'Mermaid Diagram',
           accept: {'text/plain': ['.mmd', '.txt']}
@@ -261,7 +272,7 @@ $('#btnSave').onclick=async ()=>{
     }
   } else {
     // Fallback to instant download for unsupported browsers
-    download(blob, 'diagram.mmd');
+    download(blob, suggestedName);
   }
 };
 /* ----- Open .mmd ----- */
@@ -271,8 +282,24 @@ fileInput.onchange=()=>{
   const file=fileInput.files[0];if(!file)return;
   // Save current state before opening new file
   saveToUndoStack();
+
+  // Create new tab if current tab has content
+  if (editor.value.trim()) {
+    createNewTab(false);
+  }
+
   const r=new FileReader();
-  r.onload=e=>{editor.value=e.target.result;render();};
+  r.onload=e=>{
+    editor.value=e.target.result;
+    const tab = tabs.find(t => t.id === activeTabId);
+    if (tab) {
+      tab.name = file.name.replace(/\.mmd$/, '');
+      tab.content = e.target.result;
+    }
+    saveCurrentTab();
+    renderTabs();
+    render();
+  };
   r.readAsText(file,'utf-8');
 };
 
@@ -553,41 +580,146 @@ const templates = {
       House Cup Victory: 5: Harry, Gryffindor`
 };
 
-/* ========= Template selector ========= */
-const templateBtn = $('#templateBtn');
-const templateMenu = $('#templateMenu');
-
-// Toggle template menu
-templateBtn.onclick = (e) => {
-  e.stopPropagation();
-  templateMenu.classList.toggle('show');
-};
-
-// Close menu when clicking outside
-document.addEventListener('click', () => {
-  templateMenu.classList.remove('show');
-});
-
-// Prevent menu from closing when clicking inside it
-templateMenu.addEventListener('click', (e) => {
-  e.stopPropagation();
-});
-
-// Handle template selection
-templateMenu.querySelectorAll('.template-item').forEach(item => {
-  item.onclick = () => {
-    const templateName = item.dataset.template;
-    if (templates[templateName]) {
-      // Save current diagram to undo stack before loading template
-      saveToUndoStack();
-      // Load template
-      editor.value = templates[templateName];
-      localStorage.setItem(LS_KEY, editor.value);
-      render();
+/* ========= Tab Management ========= */
+function saveCurrentTab() {
+  if (activeTabId !== null) {
+    const tab = tabs.find(t => t.id === activeTabId);
+    if (tab) {
+      tab.content = editor.value;
+      saveTabs();
     }
-    templateMenu.classList.remove('show');
+  }
+}
+
+function saveTabs() {
+  localStorage.setItem(LS_TABS_KEY, JSON.stringify(tabs));
+  localStorage.setItem(LS_ACTIVE_TAB_KEY, activeTabId);
+}
+
+function loadTabs() {
+  const savedTabs = localStorage.getItem(LS_TABS_KEY);
+  const savedActiveId = localStorage.getItem(LS_ACTIVE_TAB_KEY);
+
+  if (savedTabs) {
+    tabs = JSON.parse(savedTabs);
+    nextTabId = Math.max(...tabs.map(t => t.id), 0) + 1;
+    activeTabId = savedActiveId ? parseInt(savedActiveId) : (tabs[0]?.id || null);
+  }
+
+  if (tabs.length === 0) {
+    createNewTab();
+  } else {
+    renderTabs();
+    switchToTab(activeTabId);
+  }
+}
+
+function renderTabs() {
+  tabList.innerHTML = '';
+  tabs.forEach(tab => {
+    const tabEl = document.createElement('div');
+    tabEl.className = 'tab' + (tab.id === activeTabId ? ' active' : '');
+    tabEl.innerHTML = `
+      <span class="tab-name">${tab.name}</span>
+      <span class="tab-close" data-tab-id="${tab.id}">×</span>
+    `;
+    tabEl.addEventListener('click', (e) => {
+      if (!e.target.classList.contains('tab-close')) {
+        switchToTab(tab.id);
+      }
+    });
+    tabList.appendChild(tabEl);
+  });
+}
+
+function switchToTab(tabId) {
+  saveCurrentTab();
+  activeTabId = tabId;
+  const tab = tabs.find(t => t.id === tabId);
+  if (tab) {
+    editor.value = tab.content;
+    lastSavedContent = tab.content.trim();
+    renderTabs();
+    render();
+
+    // Hide template picker if switching to a tab with content
+    if (tab.content.trim()) {
+      templatePicker.classList.add('hidden');
+    }
+  }
+}
+
+function createNewTab(showPicker = true) {
+  saveCurrentTab();
+  const newTab = {
+    id: nextTabId++,
+    name: `Untitled ${nextTabId - 1}`,
+    content: ''
+  };
+  tabs.push(newTab);
+  activeTabId = newTab.id;
+  editor.value = '';
+  lastSavedContent = '';
+  saveTabs();
+  renderTabs();
+
+  if (showPicker) {
+    templatePicker.classList.remove('hidden');
+  } else {
+    templatePicker.classList.add('hidden');
+  }
+
+  output.innerHTML = '<em>Nothing to render.</em>';
+  editor.focus();
+}
+
+function closeTab(tabId) {
+  const index = tabs.findIndex(t => t.id === tabId);
+  if (index === -1) return;
+
+  tabs.splice(index, 1);
+
+  if (tabs.length === 0) {
+    createNewTab();
+  } else if (tabId === activeTabId) {
+    // Switch to adjacent tab
+    const newIndex = Math.min(index, tabs.length - 1);
+    switchToTab(tabs[newIndex].id);
+  } else {
+    saveTabs();
+    renderTabs();
+  }
+}
+
+// Tab event listeners
+$('#btnNewTab').onclick = () => createNewTab(true);
+
+tabList.addEventListener('click', (e) => {
+  if (e.target.classList.contains('tab-close')) {
+    const tabId = parseInt(e.target.dataset.tabId);
+    closeTab(tabId);
+    e.stopPropagation();
+  }
+});
+
+// Template picker handlers
+templatePicker.querySelectorAll('.template-card').forEach(card => {
+  card.onclick = () => {
+    const templateName = card.dataset.template;
+    if (templates[templateName]) {
+      editor.value = templates[templateName];
+      saveCurrentTab();
+      templatePicker.classList.add('hidden');
+      render();
+      editor.focus();
+    }
   };
 });
+
+$('#btnSkipTemplate').onclick = () => {
+  templatePicker.classList.add('hidden');
+  editor.focus();
+};
 
 /* ========= Undo functionality ========= */
 $('#btnUndo').onclick = () => {
@@ -603,15 +735,6 @@ $('#btnUndo').onclick = () => {
   }
 };
 
-/* ========= Starter diagram ========= */
-
-const saved = localStorage.getItem(LS_KEY);
-if (saved !== null && saved.trim()) {
-  editor.value = saved;
-} else {
-  // default
-  editor.value = templates.flowchart;
-}
-
+/* ========= Initialize ========= */
 updateDiagramBackground();
-render();
+loadTabs();
