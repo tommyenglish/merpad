@@ -590,7 +590,10 @@ function loadTabs() {
 }
 
 function renderTabs() {
+  // Clear all tabs but keep the + button
+  const newTabBtn = $('#btnNewTab');
   tabList.innerHTML = '';
+
   tabs.forEach(tab => {
     const tabEl = document.createElement('div');
     tabEl.className = 'tab' + (tab.id === activeTabId ? ' active' : '');
@@ -605,6 +608,9 @@ function renderTabs() {
     });
     tabList.appendChild(tabEl);
   });
+
+  // Re-add the + button at the end
+  tabList.appendChild(newTabBtn);
 }
 
 function switchToTab(tabId) {
