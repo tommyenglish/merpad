@@ -47,7 +47,7 @@
 			<button id="btnPng">PNG…</b…utton>
 			<button id="btnCopy">Copy PNG</button>
 		</div>
-		
+
 		<div class="group">
 			<button id="btnOpen">Open…</button>
 			<button id="btnSave">Save…</button>
@@ -56,8 +56,58 @@
 	</div>
   </div>
 
+  <div id="tabBar">
+    <div id="tabList">
+      <button id="btnNewTab" title="New tab">+</button>
+    </div>
+  </div>
+
   <div id="splitContainer">
-    <textarea id="editor" spellcheck="false"></textarea>
+    <div id="editorWrapper">
+      <textarea id="editor" spellcheck="false"></textarea>
+      <div id="templatePicker" class="template-picker hidden">
+        <h3>Start with a template or type your own diagram</h3>
+        <div class="template-grid">
+          <div class="template-card" data-template="flowchart">
+            <div class="template-icon">🌊</div>
+            <div class="template-name">Flowchart</div>
+          </div>
+          <div class="template-card" data-template="sequence">
+            <div class="template-icon">↔️</div>
+            <div class="template-name">Sequence</div>
+          </div>
+          <div class="template-card" data-template="gantt">
+            <div class="template-icon">📅</div>
+            <div class="template-name">Gantt</div>
+          </div>
+          <div class="template-card" data-template="class">
+            <div class="template-icon">📦</div>
+            <div class="template-name">Class</div>
+          </div>
+          <div class="template-card" data-template="erDiagram">
+            <div class="template-icon">🗃️</div>
+            <div class="template-name">ER Diagram</div>
+          </div>
+          <div class="template-card" data-template="state">
+            <div class="template-icon">🔄</div>
+            <div class="template-name">State</div>
+          </div>
+          <div class="template-card" data-template="pie">
+            <div class="template-icon">🥧</div>
+            <div class="template-name">Pie Chart</div>
+          </div>
+          <div class="template-card" data-template="gitGraph">
+            <div class="template-icon">🌳</div>
+            <div class="template-name">Git Graph</div>
+          </div>
+          <div class="template-card" data-template="journey">
+            <div class="template-icon">🗺️</div>
+            <div class="template-name">Journey</div>
+          </div>
+        </div>
+        <button id="btnSkipTemplate" class="skip-template">Skip - Start blank</button>
+      </div>
+    </div>
     <div id="divider"></div>
     <div id="diagram"></div>
   </div>

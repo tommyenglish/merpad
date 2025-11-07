@@ -25,12 +25,16 @@ const themes = {
 };
 
 /* ========= State ========= */
-const LS_KEY = 'merpad-current-diagram';
+const LS_TABS_KEY = 'merpad-tabs';
+const LS_ACTIVE_TAB_KEY = 'merpad-active-tab';
 const DEBOUNCE = 400; // ms to wait after last keystroke
 let currentTheme='print';
 let currentLayout='dagre';
 let zoom=1;
 let orientation='horizontal'; // 'vertical' or 'horizontal'
+let tabs = []; // Array of tab objects {id, name, content, modified}
+let activeTabId = null; // Currently active tab ID
+let nextTabId = 1; // Counter for tab IDs
 
 /* ========= Theme backgrounds ========= */
 // Define background colors for each theme
@@ -64,7 +68,10 @@ const $=q=>document.querySelector(q);
 const editor=$('#editor'),output=$('#diagram');
 const themeSel=$('#themeSelect'),layoutSel=$('#layoutSelect'),dims=$('#dims');
 const divider=$('#divider'),splitContainer=$('#splitContainer');
+const editorWrapper=$('#editorWrapper');
 const layoutToggle=$('#layoutToggle');
+const tabList=$('#tabList');
+const templatePicker=$('#templatePicker');
 
 /* ========= Helpers ========= */
 function updateDims(){
@@ -121,10 +128,10 @@ function restoreSplitPosition() {
   const key = orientation === 'vertical' ? SPLIT_VERTICAL_KEY : SPLIT_HORIZONTAL_KEY;
   const savedSplit = localStorage.getItem(key);
   if (savedSplit) {
-    editor.style.flexBasis = savedSplit + 'px';
+    editorWrapper.style.flexBasis = savedSplit + 'px';
   } else {
     // Reset to default
-    editor.style.flexBasis = orientation === 'vertical' ? '200px' : '30%';
+    editorWrapper.style.flexBasis = orientation === 'vertical' ? '200px' : '30%';
   }
 }
 restoreSplitPosition();
@@ -161,14 +168,14 @@ document.addEventListener('mousemove', (e) => {
     const maxHeight = containerRect.height - minSize;
 
     if (newEditorHeight >= minSize && newEditorHeight <= maxHeight) {
-      editor.style.flexBasis = newEditorHeight + 'px';
+      editorWrapper.style.flexBasis = newEditorHeight + 'px';
     }
   } else {
     const newEditorWidth = e.clientX - containerRect.left;
     const maxWidth = containerRect.width - minSize;
 
     if (newEditorWidth >= minSize && newEditorWidth <= maxWidth) {
-      editor.style.flexBasis = newEditorWidth + 'px';
+      editorWrapper.style.flexBasis = newEditorWidth + 'px';
     }
   }
 });
@@ -180,7 +187,7 @@ document.addEventListener('mouseup', () => {
     document.body.style.cursor = '';
 
     // Save the current split position for current orientation
-    const currentSize = parseInt(editor.style.flexBasis);
+    const currentSize = parseInt(editorWrapper.style.flexBasis);
     if (!isNaN(currentSize)) {
       const key = orientation === 'vertical' ? SPLIT_VERTICAL_KEY : SPLIT_HORIZONTAL_KEY;
       localStorage.setItem(key, currentSize);
@@ -238,15 +245,24 @@ $('#zoomReset').onclick=()=>{zoom=1;applyZoom();};
 let pending;
 editor.addEventListener('input', e => {
   clearTimeout(pending);
+
   pending = setTimeout(() => {
     const isWhitespaceOnly =
       (e.data && /^[ \t\n\r]$/.test(e.data)) ||  // normal typing
       (e.inputType === 'insertParagraph') ||     // Enter on some browsers
       (e.inputType === 'insertLineBreak');       // Shift+Enter
-	
+
     if (!isWhitespaceOnly) {
-      render();                                    // auto‑render
-      localStorage.setItem(LS_KEY, editor.value);  // auto‑save
+      render();         // auto‑render
+
+      // Mark tab as modified
+      const tab = tabs.find(t => t.id === activeTabId);
+      if (tab && !tab.modified) {
+        tab.modified = true;
+        renderTabs();
+      }
+
+      saveCurrentTab(); // auto‑save tab
 	}
   }, DEBOUNCE);
 });
@@ -261,11 +277,15 @@ $('#btnSave').onclick=async ()=>{
   const text=editor.value;if(!text.trim())return;
   const blob=new Blob([text],{type:'text/plain'});
 
+  // Get suggested filename from tab name
+  const tab = tabs.find(t => t.id === activeTabId);
+  const suggestedName = (tab && tab.name !== `Untitled ${tab.id}` ? tab.name : 'diagram') + '.mmd';
+
   // Try to use File System Access API for save dialog
   if (window.showSaveFilePicker) {
     try {
       const handle = await window.showSaveFilePicker({
-        suggestedName: 'diagram.mmd',
+        suggestedName,
         types: [{
           description: 'Mermaid Diagram',
           accept: {'text/plain': ['.mmd', '.txt']}
@@ -274,6 +294,14 @@ $('#btnSave').onclick=async ()=>{
       const writable = await handle.createWritable();
       await writable.write(blob);
       await writable.close();
+
+      // Update tab name with saved filename and clear modified flag
+      if (tab && handle.name) {
+        tab.name = handle.name.replace(/\.mmd$/, '');
+        tab.modified = false;
+        saveTabs();
+        renderTabs();
+      }
     } catch (err) {
       // User cancelled or error occurred
       if (err.name !== 'AbortError') {
@@ -283,7 +311,7 @@ $('#btnSave').onclick=async ()=>{
     }
   } else {
     // Fallback to instant download for unsupported browsers
-    download(blob, 'diagram.mmd');
+    download(blob, suggestedName);
   }
 };
 /* ----- Open .mmd ----- */
@@ -291,8 +319,25 @@ const fileInput=$('#fileOpen');
 $('#btnOpen').onclick=()=>fileInput.click();
 fileInput.onchange=()=>{
   const file=fileInput.files[0];if(!file)return;
+
+  // Create new tab if current tab has content
+  if (editor.value.trim()) {
+    createNewTab(false);
+  }
+
   const r=new FileReader();
-  r.onload=e=>{editor.value=e.target.result;render();};
+  r.onload=e=>{
+    editor.value=e.target.result;
+    const tab = tabs.find(t => t.id === activeTabId);
+    if (tab) {
+      tab.name = file.name.replace(/\.mmd$/, '');
+      tab.content = e.target.result;
+      tab.modified = false; // File just opened, not modified
+    }
+    saveCurrentTab();
+    renderTabs();
+    render();
+  };
   r.readAsText(file,'utf-8');
 };
 
@@ -385,20 +430,365 @@ $('#btnCopy').onclick=()=>{
     .catch(e=>alert('Failed: '+e)));
 };
 
-/* ========= Starter diagram ========= */
+/* ========= Templates ========= */
+const templates = {
+  flowchart: `flowchart TD
+    A[Arrive at Hogwarts] --> B{Sorting Hat Decision}
+    B -- Brave --> C[Gryffindor]
+    B -- Cunning --> D[Slytherin]
+    B -- Wise --> E[Ravenclaw]
+    B -- Loyal --> F[Hufflepuff]
+    C --> G[Begin Classes]
+    D --> G
+    E --> G
+    F --> G`,
 
-const saved = localStorage.getItem(LS_KEY);
-if (saved !== null && saved.trim()) {
-  editor.value = saved;
-} else {
-  // default
-  editor.value = `flowchart TD
-  A[Start] --> B{Is it sunny?}
-  B -- Yes --> C[Go for a walk]
-  B -- No  --> D[Read a book]
-  C --> E[End]
-  D --> E`;
+  sequence: `sequenceDiagram
+    participant Harry
+    participant Hedwig
+    participant Ron
+    participant Hermione
+
+    Harry->>Hedwig: Write letter to Ron
+    activate Hedwig
+    Hedwig->>Ron: Deliver letter
+    activate Ron
+    Ron-->>Hedwig: Write reply
+    deactivate Ron
+    Hedwig-->>Harry: Return with response
+    deactivate Hedwig
+
+    Harry->>Hedwig: Send to Hermione
+    activate Hedwig
+    Hedwig->>Hermione: Deliver letter
+    activate Hermione
+    Hermione-->>Hedwig: Detailed reply (3 pages)
+    deactivate Hermione
+    Hedwig-->>Harry: Exhausted return
+    deactivate Hedwig`,
+
+  gantt: `gantt
+    title Hogwarts School Year
+    dateFormat YYYY-MM-DD
+    section First Term
+    Welcome Feast           :a1, 2024-09-01, 7d
+    Defense Against Dark Arts :a2, after a1, 60d
+    Potions Class          :a3, after a1, 60d
+    section Halloween
+    Troll in Dungeon       :b1, 2024-10-31, 1d
+    Saving Hermione        :b2, after b1, 1d
+    section Quidditch
+    First Match            :c1, 2024-11-15, 1d
+    Training Sessions      :c2, 2024-10-01, 90d
+    section Christmas
+    Winter Break           :d1, 2024-12-20, 14d
+    section Final Term
+    Exams Preparation      :e1, 2025-05-01, 30d
+    Final Exams            :e2, after e1, 7d`,
+
+  class: `classDiagram
+    class Wizard {
+        +String name
+        +String house
+        +int magicLevel
+        +castSpell()
+        +brewPotion()
+    }
+    class Gryffindor {
+        +String trait = "Brave"
+        +summonPatronus()
+        +defendAgainstDarkArts()
+    }
+    class Slytherin {
+        +String trait = "Cunning"
+        +speakParseltongue()
+        +masterLegilimency()
+    }
+    class Ravenclaw {
+        +String trait = "Wise"
+        +solveRiddles()
+        +advancedCharms()
+    }
+    Wizard <|-- Gryffindor
+    Wizard <|-- Slytherin
+    Wizard <|-- Ravenclaw
+
+    class Wand {
+        +String wood
+        +String core
+        +choosesWizard()
+    }
+    Wizard "1" --> "1" Wand : wields`,
+
+  erDiagram: `erDiagram
+    STUDENT ||--o{ ENROLLMENT : enrolls
+    STUDENT {
+        string id PK
+        string name
+        string house
+        int year
+        date birthdate
+    }
+    HOUSE ||--o{ STUDENT : belongs_to
+    HOUSE {
+        string name PK
+        string founder
+        string commonRoom
+        int points
+    }
+    CLASS ||--o{ ENROLLMENT : has
+    CLASS {
+        string id PK
+        string name
+        string professor
+        string classroom
+    }
+    ENROLLMENT {
+        string studentId FK
+        string classId FK
+        string grade
+        int attendance
+    }
+    HOUSE ||--o{ QUIDDITCH_TEAM : fields
+    QUIDDITCH_TEAM {
+        string houseId FK
+        string captain
+        int wins
+    }`,
+
+  state: `stateDiagram-v2
+    [*] --> Human
+    Human --> Bitten : Werewolf Attack
+    Bitten --> Infected : Survive Bite
+    Infected --> Transforming : Full Moon Rises
+    Transforming --> Werewolf : Complete Transformation
+    Werewolf --> Hunting : Night Falls
+    Hunting --> Werewolf : Prowling
+    Werewolf --> Reverting : Dawn Breaks
+    Reverting --> Human : Morning Light
+    Human --> Infected : Monthly Cycle
+    Infected --> Cured : Drink Wolfsbane Potion
+    Cured --> [*]`,
+
+  pie: `pie title House Points Championship
+    "Gryffindor" : 482
+    "Slytherin" : 472
+    "Ravenclaw" : 426
+    "Hufflepuff" : 352`,
+
+  gitGraph: `gitGraph
+    commit id: "Selected as Champion"
+    commit id: "Study dragons"
+    branch dragon-task
+    checkout dragon-task
+    commit id: "Learn Accio spell"
+    commit id: "Practice on Firebolt"
+    commit id: "Get past Hungarian Horntail"
+    checkout main
+    merge dragon-task tag: "Golden-Egg"
+    commit id: "Decode egg clue"
+    branch lake-task
+    checkout lake-task
+    commit id: "Research gillyweed"
+    commit id: "Test breathing underwater"
+    commit id: "Save hostages from lake"
+    checkout main
+    merge lake-task tag: "Second-Place"
+    commit id: "Prepare for maze"
+    commit id: "Enter maze"
+    commit id: "Grab Triwizard Cup"`,
+
+  journey: `journey
+    title Harry's First Year at Hogwarts
+    section Arrival
+      Board Hogwarts Express: 5: Harry, Ron, Hermione
+      Cross the Lake: 4: Harry, First Years
+      Sorting Ceremony: 3: Harry, Sorting Hat
+    section Learning Magic
+      First Potions Class: 2: Harry, Snape
+      Flying Lessons: 5: Harry, Madam Hooch
+      Defense Against Dark Arts: 4: Harry, Professor
+    section Adventures
+      Troll in Dungeon: 3: Harry, Ron, Hermione
+      First Quidditch Match: 5: Harry, Team
+      Forbidden Forest: 2: Harry, Detention
+    section Final Challenge
+      Through the Trapdoor: 3: Harry, Ron, Hermione
+      Defeat Voldemort: 4: Harry
+      House Cup Victory: 5: Harry, Gryffindor`
+};
+
+/* ========= Tab Management ========= */
+function saveCurrentTab() {
+  if (activeTabId !== null) {
+    const tab = tabs.find(t => t.id === activeTabId);
+    if (tab) {
+      tab.content = editor.value;
+      saveTabs();
+    }
+  }
 }
 
+function saveTabs() {
+  localStorage.setItem(LS_TABS_KEY, JSON.stringify(tabs));
+  localStorage.setItem(LS_ACTIVE_TAB_KEY, activeTabId);
+}
+
+function loadTabs() {
+  const savedTabs = localStorage.getItem(LS_TABS_KEY);
+  const savedActiveId = localStorage.getItem(LS_ACTIVE_TAB_KEY);
+
+  if (savedTabs) {
+    tabs = JSON.parse(savedTabs);
+    // Ensure all tabs have a modified flag (backward compatibility)
+    tabs.forEach(tab => {
+      if (tab.modified === undefined) {
+        tab.modified = false;
+      }
+    });
+    nextTabId = Math.max(...tabs.map(t => t.id), 0) + 1;
+    activeTabId = savedActiveId ? parseInt(savedActiveId) : (tabs[0]?.id || null);
+  }
+
+  if (tabs.length === 0) {
+    createNewTab();
+  } else {
+    renderTabs();
+    switchToTab(activeTabId);
+  }
+}
+
+function renderTabs() {
+  // Clear all tabs but keep the + button
+  const newTabBtn = $('#btnNewTab');
+  tabList.innerHTML = '';
+
+  tabs.forEach(tab => {
+    const tabEl = document.createElement('div');
+    tabEl.className = 'tab' + (tab.id === activeTabId ? ' active' : '');
+    const modifiedIndicator = tab.modified ? ' *' : '';
+    tabEl.innerHTML = `
+      <span class="tab-name">${tab.name}${modifiedIndicator}</span>
+      <span class="tab-close" data-tab-id="${tab.id}">×</span>
+    `;
+    tabEl.addEventListener('click', (e) => {
+      if (!e.target.classList.contains('tab-close')) {
+        switchToTab(tab.id);
+      }
+    });
+    tabList.appendChild(tabEl);
+  });
+
+  // Re-add the + button at the end
+  tabList.appendChild(newTabBtn);
+}
+
+function switchToTab(tabId) {
+  saveCurrentTab();
+  activeTabId = tabId;
+  const tab = tabs.find(t => t.id === tabId);
+  if (tab) {
+    editor.value = tab.content;
+    renderTabs();
+    render();
+
+    // Hide template picker if switching to a tab with content
+    if (tab.content.trim()) {
+      templatePicker.classList.add('hidden');
+    }
+  }
+}
+
+function getNextUntitledNumber() {
+  // Find all tabs with "Untitled X" pattern
+  const untitledNumbers = tabs
+    .map(tab => {
+      const match = tab.name.match(/^Untitled (\d+)$/);
+      return match ? parseInt(match[1]) : 0;
+    })
+    .filter(num => num > 0);
+
+  // Return highest + 1, or 1 if none exist
+  return untitledNumbers.length > 0 ? Math.max(...untitledNumbers) + 1 : 1;
+}
+
+function createNewTab(showPicker = true) {
+  saveCurrentTab();
+  const newTab = {
+    id: nextTabId++,
+    name: `Untitled ${getNextUntitledNumber()}`,
+    content: '',
+    modified: false
+  };
+  tabs.push(newTab);
+  activeTabId = newTab.id;
+  editor.value = '';
+  saveTabs();
+  renderTabs();
+
+  if (showPicker) {
+    templatePicker.classList.remove('hidden');
+  } else {
+    templatePicker.classList.add('hidden');
+  }
+
+  output.innerHTML = '<em>Nothing to render.</em>';
+  editor.focus();
+}
+
+function closeTab(tabId) {
+  const index = tabs.findIndex(t => t.id === tabId);
+  if (index === -1) return;
+
+  tabs.splice(index, 1);
+
+  if (tabs.length === 0) {
+    createNewTab();
+  } else if (tabId === activeTabId) {
+    // Switch to adjacent tab
+    const newIndex = Math.min(index, tabs.length - 1);
+    switchToTab(tabs[newIndex].id);
+  } else {
+    saveTabs();
+    renderTabs();
+  }
+}
+
+// Tab event listeners
+$('#btnNewTab').onclick = () => createNewTab(true);
+
+tabList.addEventListener('click', (e) => {
+  if (e.target.classList.contains('tab-close')) {
+    const tabId = parseInt(e.target.dataset.tabId);
+    closeTab(tabId);
+    e.stopPropagation();
+  }
+});
+
+// Template picker handlers
+templatePicker.querySelectorAll('.template-card').forEach(card => {
+  card.onclick = () => {
+    const templateName = card.dataset.template;
+    if (templates[templateName]) {
+      editor.value = templates[templateName];
+      const tab = tabs.find(t => t.id === activeTabId);
+      if (tab) {
+        tab.modified = true; // Template selected, needs to be saved
+      }
+      saveCurrentTab();
+      templatePicker.classList.add('hidden');
+      renderTabs();
+      render();
+      editor.focus();
+    }
+  };
+});
+
+$('#btnSkipTemplate').onclick = () => {
+  templatePicker.classList.add('hidden');
+  editor.focus();
+};
+
+/* ========= Initialize ========= */
 updateDiagramBackground();
-render();
+loadTabs();
