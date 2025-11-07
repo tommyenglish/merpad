@@ -799,5 +799,12 @@ $('#btnSkipTemplate').onclick = () => {
 };
 
 /* ========= Initialize ========= */
+// Initialize editor first (before loading tabs)
+editor = createSyntaxEditor(editorContainer, '', handleEditorChange);
+
+// Set initial editor theme
+const initialEditorTheme = (currentTheme === 'dark' || currentTheme === 'vibrant') ? 'dark' : 'light';
+editorContainer.className = initialEditorTheme === 'dark' ? 'dark' : '';
+
 updateDiagramBackground();
 loadTabs();
