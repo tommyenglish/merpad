@@ -332,6 +332,169 @@ $('#btnCopy').onclick=()=>{
     .catch(e=>alert('Failed: '+e)));
 };
 
+/* ========= Templates ========= */
+const templates = {
+  flowchart: `flowchart TD
+    A[Start] --> B{Is it sunny?}
+    B -- Yes --> C[Go for a walk]
+    B -- No  --> D[Read a book]
+    C --> E[End]
+    D --> E`,
+
+  sequence: `sequenceDiagram
+    participant Client
+    participant API
+    participant Database
+
+    Client->>API: POST /login
+    activate API
+    API->>Database: Query user
+    activate Database
+    Database-->>API: User data
+    deactivate Database
+    API-->>Client: JWT token
+    deactivate API
+
+    Client->>API: GET /profile
+    activate API
+    API->>API: Verify token
+    API-->>Client: Profile data
+    deactivate API`,
+
+  gantt: `gantt
+    title Project Timeline
+    dateFormat YYYY-MM-DD
+    section Planning
+    Research           :a1, 2024-01-01, 30d
+    Requirements       :a2, after a1, 20d
+    section Development
+    Backend API        :b1, after a2, 45d
+    Frontend UI        :b2, after a2, 40d
+    Integration        :b3, after b1, 15d
+    section Testing
+    QA Testing         :c1, after b3, 20d
+    Bug Fixes          :c2, after c1, 10d
+    section Launch
+    Deployment         :d1, after c2, 5d`,
+
+  class: `classDiagram
+    class Animal {
+        +String name
+        +int age
+        +makeSound()
+        +move()
+    }
+    class Dog {
+        +String breed
+        +bark()
+        +fetch()
+    }
+    class Cat {
+        +Boolean indoor
+        +meow()
+        +scratch()
+    }
+    Animal <|-- Dog
+    Animal <|-- Cat
+
+    class Owner {
+        +String name
+        +feedPet()
+    }
+    Owner "1" --> "*" Animal : owns`,
+
+  erDiagram: `erDiagram
+    CUSTOMER ||--o{ ORDER : places
+    CUSTOMER {
+        string id PK
+        string name
+        string email
+        date registered
+    }
+    ORDER ||--|{ LINE_ITEM : contains
+    ORDER {
+        string id PK
+        date orderDate
+        string status
+        float total
+    }
+    PRODUCT ||--o{ LINE_ITEM : includes
+    PRODUCT {
+        string id PK
+        string name
+        float price
+        int inventory
+    }
+    LINE_ITEM {
+        string orderId FK
+        string productId FK
+        int quantity
+        float subtotal
+    }`,
+
+  state: `stateDiagram-v2
+    [*] --> Idle
+    Idle --> Loading : Start
+    Loading --> Success : Data Loaded
+    Loading --> Error : Load Failed
+    Success --> Idle : Reset
+    Error --> Loading : Retry
+    Error --> Idle : Cancel
+    Success --> [*]`,
+
+  pie: `pie title Browser Market Share 2024
+    "Chrome" : 65
+    "Safari" : 18
+    "Edge" : 8
+    "Firefox" : 6
+    "Other" : 3`,
+
+  gitGraph: `gitGraph
+    commit id: "Initial commit"
+    commit id: "Add features"
+    branch develop
+    checkout develop
+    commit id: "Start development"
+    commit id: "Add login"
+    checkout main
+    merge develop
+    commit id: "Release v1.0"
+    branch hotfix
+    checkout hotfix
+    commit id: "Fix critical bug"
+    checkout main
+    merge hotfix tag: "v1.0.1"`,
+
+  journey: `journey
+    title User Journey: Online Shopping
+    section Browse
+      Visit website: 5: Customer
+      Search products: 4: Customer
+      View details: 3: Customer
+    section Purchase
+      Add to cart: 4: Customer
+      Review cart: 3: Customer
+      Enter shipping: 2: Customer, System
+      Payment: 2: Customer, Payment Gateway
+    section Post-Purchase
+      Order confirmation: 5: Customer, System
+      Track shipment: 4: Customer
+      Receive product: 5: Customer`
+};
+
+/* ========= Template selector ========= */
+const templateSel = $('#templateSelect');
+templateSel.onchange = () => {
+  const templateName = templateSel.value;
+  if (templateName && templates[templateName]) {
+    editor.value = templates[templateName];
+    localStorage.setItem(LS_KEY, editor.value);
+    render();
+  }
+  // Reset dropdown to placeholder
+  templateSel.value = '';
+};
+
 /* ========= Starter diagram ========= */
 
 const saved = localStorage.getItem(LS_KEY);
@@ -339,12 +502,7 @@ if (saved !== null && saved.trim()) {
   editor.value = saved;
 } else {
   // default
-  editor.value = `flowchart TD
-  A[Start] --> B{Is it sunny?}
-  B -- Yes --> C[Go for a walk]
-  B -- No  --> D[Read a book]
-  C --> E[End]
-  D --> E`;
+  editor.value = templates.flowchart;
 }
 
 updateDiagramBackground();
