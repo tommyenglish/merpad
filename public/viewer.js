@@ -1,6 +1,7 @@
 /* ========= Import and register things */
 import mermaid from './mermaid.esm.min.mjs';
-import elkLayouts from './mermaid-layout-elk.esm.min.mjs'; 
+import elkLayouts from './mermaid-layout-elk.esm.min.mjs';
+import { createSyntaxEditor } from './syntax-highlighter.js';
 
 mermaid.registerLayoutLoaders(elkLayouts);
 
@@ -65,13 +66,16 @@ applyConfig();
 
 /* ========= DOM refs ========= */
 const $=q=>document.querySelector(q);
-const editor=$('#editor'),output=$('#diagram');
+const editorContainer=$('#editor'),output=$('#diagram');
 const themeSel=$('#themeSelect'),layoutSel=$('#layoutSelect'),dims=$('#dims');
 const divider=$('#divider'),splitContainer=$('#splitContainer');
 const editorWrapper=$('#editorWrapper');
 const layoutToggle=$('#layoutToggle');
 const tabList=$('#tabList');
 const templatePicker=$('#templatePicker');
+
+// Initialize editor (will be set up after loading initial content)
+let editor = null;
 
 /* ========= Helpers ========= */
 function updateDims(){
@@ -229,7 +233,8 @@ document.addEventListener('mousemove', (e) => {
 
 /* ========= Render ========= */
 async function render(){
-  const code=editor.value.trim();
+  if (!editor) return; // Editor not initialized yet
+  const code=editor.getValue().trim();
   if(!code){output.innerHTML='<em>Nothing to render.</em>';updateDims();return;}
   try{
     const {svg,bindFunctions}=await mermaid.render('mmd-diagram',code);
@@ -242,39 +247,43 @@ $('#zoomIn').onclick =()=>{zoom*=1.25;applyZoom();};
 $('#zoomOut').onclick=()=>{zoom/=1.25;applyZoom();};
 $('#zoomReset').onclick=()=>{zoom=1;applyZoom();};
 
+// Debounced render and save (will be called by editor onChange)
 let pending;
-editor.addEventListener('input', e => {
+function handleEditorChange() {
   clearTimeout(pending);
 
   pending = setTimeout(() => {
-    const isWhitespaceOnly =
-      (e.data && /^[ \t\n\r]$/.test(e.data)) ||  // normal typing
-      (e.inputType === 'insertParagraph') ||     // Enter on some browsers
-      (e.inputType === 'insertLineBreak');       // Shift+Enter
+    render();         // auto‑render
 
-    if (!isWhitespaceOnly) {
-      render();         // auto‑render
+    // Mark tab as modified
+    const tab = tabs.find(t => t.id === activeTabId);
+    if (tab && !tab.modified) {
+      tab.modified = true;
+      renderTabs();
+    }
 
-      // Mark tab as modified
-      const tab = tabs.find(t => t.id === activeTabId);
-      if (tab && !tab.modified) {
-        tab.modified = true;
-        renderTabs();
-      }
-
-      saveCurrentTab(); // auto‑save tab
-	}
+    saveCurrentTab(); // auto‑save tab
   }, DEBOUNCE);
-});
+}
 
 themeSel.value=currentTheme;
 layoutSel.value=currentLayout;
-themeSel.onchange=()=>{currentTheme=themeSel.value;applyConfig();updateDiagramBackground();render();};
+themeSel.onchange=()=>{
+  currentTheme=themeSel.value;
+  applyConfig();
+  updateDiagramBackground();
+  // Update editor theme based on diagram theme
+  const editorTheme = (currentTheme === 'dark' || currentTheme === 'vibrant') ? 'dark' : 'light';
+  if (editorContainer) {
+    editorContainer.className = editorTheme === 'dark' ? 'dark' : '';
+  }
+  render();
+};
 layoutSel.onchange=()=>{currentLayout=layoutSel.value;applyConfig();render();};
 
 /* ----- Save .mmd ----- */
 $('#btnSave').onclick=async ()=>{
-  const text=editor.value;if(!text.trim())return;
+  const text=editor.getValue();if(!text.trim())return;
   const blob=new Blob([text],{type:'text/plain'});
 
   // Get suggested filename from tab name
@@ -321,13 +330,13 @@ fileInput.onchange=()=>{
   const file=fileInput.files[0];if(!file)return;
 
   // Create new tab if current tab has content
-  if (editor.value.trim()) {
+  if (editor.getValue().trim()) {
     createNewTab(false);
   }
 
   const r=new FileReader();
   r.onload=e=>{
-    editor.value=e.target.result;
+    editor.setValue(e.target.result);
     const tab = tabs.find(t => t.id === activeTabId);
     if (tab) {
       tab.name = file.name.replace(/\.mmd$/, '');
@@ -623,7 +632,7 @@ function saveCurrentTab() {
   if (activeTabId !== null) {
     const tab = tabs.find(t => t.id === activeTabId);
     if (tab) {
-      tab.content = editor.value;
+      tab.content = editor.getValue();
       saveTabs();
     }
   }
@@ -688,7 +697,7 @@ function switchToTab(tabId) {
   activeTabId = tabId;
   const tab = tabs.find(t => t.id === tabId);
   if (tab) {
-    editor.value = tab.content;
+    editor.setValue(tab.content);
     renderTabs();
     render();
 
@@ -722,7 +731,7 @@ function createNewTab(showPicker = true) {
   };
   tabs.push(newTab);
   activeTabId = newTab.id;
-  editor.value = '';
+  editor.setValue('');
   saveTabs();
   renderTabs();
 
@@ -770,7 +779,7 @@ templatePicker.querySelectorAll('.template-card').forEach(card => {
   card.onclick = () => {
     const templateName = card.dataset.template;
     if (templates[templateName]) {
-      editor.value = templates[templateName];
+      editor.setValue(templates[templateName]);
       const tab = tabs.find(t => t.id === activeTabId);
       if (tab) {
         tab.modified = true; // Template selected, needs to be saved
