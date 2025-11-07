@@ -75,7 +75,21 @@ function updateDims(){
 }
 function applyZoom(){
   const svg=$('svg',output);
-  if(svg) svg.style.transform=`scale(${zoom})`;
+  if(!svg) return;
+
+  // Get the natural size of the SVG
+  const bbox=svg.getBBox();
+  const {width,height,x,y}=bbox;
+
+  // Apply zoom by adjusting width/height and viewBox
+  // This ensures the container recognizes the scrollable area for pan mode
+  const scaledWidth = width * zoom;
+  const scaledHeight = height * zoom;
+
+  svg.setAttribute('width', scaledWidth);
+  svg.setAttribute('height', scaledHeight);
+  svg.setAttribute('viewBox', `${x} ${y} ${width} ${height}`);
+
   updateDims();
 }
 function updateDiagramBackground(){
@@ -87,6 +101,13 @@ const SPLIT_VERTICAL_KEY = 'merpad-split-vertical';
 const SPLIT_HORIZONTAL_KEY = 'merpad-split-horizontal';
 const ORIENTATION_KEY = 'merpad-orientation';
 let isDragging = false;
+
+/* ========= Pan Mode ========= */
+let isPanning = false;
+let panStartX = 0;
+let panStartY = 0;
+let scrollStartX = 0;
+let scrollStartY = 0;
 
 // Restore saved orientation
 const savedOrientation = localStorage.getItem(ORIENTATION_KEY);
@@ -165,6 +186,38 @@ document.addEventListener('mouseup', () => {
       localStorage.setItem(key, currentSize);
     }
   }
+
+  if (isPanning) {
+    isPanning = false;
+    output.style.cursor = 'grab';
+  }
+});
+
+/* ========= Pan Mode Event Handlers ========= */
+// Initialize cursor for pan mode
+output.style.cursor = 'grab';
+
+output.addEventListener('mousedown', (e) => {
+  // Don't pan if clicking on interactive elements (links, buttons in SVG)
+  if (e.target.tagName === 'A' || e.target.closest('a')) return;
+
+  isPanning = true;
+  panStartX = e.clientX;
+  panStartY = e.clientY;
+  scrollStartX = output.scrollLeft;
+  scrollStartY = output.scrollTop;
+  output.style.cursor = 'grabbing';
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isPanning) return;
+
+  const deltaX = e.clientX - panStartX;
+  const deltaY = e.clientY - panStartY;
+
+  output.scrollLeft = scrollStartX - deltaX;
+  output.scrollTop = scrollStartY - deltaY;
 });
 
 /* ========= Render ========= */
