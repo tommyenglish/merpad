@@ -112,16 +112,20 @@ export function createSyntaxEditor(container, initialValue = '', onChange = null
       `<span>${i + 1}</span>`
     ).join('');
 
+    // Sync scroll position after updating to ensure alignment
+    syncScroll();
+
     if (onChange && !skipOnChange) onChange();
   }
 
   // Sync scroll
   function syncScroll() {
-    const scrollTop = textarea.scrollTop;
-    const scrollLeft = textarea.scrollLeft;
+    const scrollTop = Math.round(textarea.scrollTop);
+    const scrollLeft = Math.round(textarea.scrollLeft);
 
     // Offset the highlight layer by the negative scroll amount
-    highlightCode.style.transform = `translate(${-scrollLeft}px, ${-scrollTop}px)`;
+    // Use translate3d for better rendering performance and pixel-perfect positioning
+    highlightCode.style.transform = `translate3d(${-scrollLeft}px, ${-scrollTop}px, 0)`;
 
     // Sync line numbers scroll
     lineNumbers.scrollTop = scrollTop;
@@ -151,8 +155,7 @@ export function createSyntaxEditor(container, initialValue = '', onChange = null
     getValue: () => textarea.value,
     setValue: (value) => {
       textarea.value = value;
-      update(true); // Skip onChange when programmatically setting value
-      syncScroll(); // Ensure scroll is synced after setting value
+      update(true); // Skip onChange when programmatically setting value (includes syncScroll)
     },
     focus: () => textarea.focus(),
   };

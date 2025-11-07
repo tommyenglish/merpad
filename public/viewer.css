@@ -60,6 +60,7 @@ button,select{padding:.35rem .8rem;font-size:1rem;cursor:pointer}
   overflow:hidden;
   min-width:3rem;
   border-right:1px solid #ddd;
+  flex-shrink:0;
 }
 
 .line-numbers span{
@@ -77,6 +78,7 @@ button,select{padding:.35rem .8rem;font-size:1rem;cursor:pointer}
   top:0;
   left:0;
   width:100%;
+  height:100%;
   margin:0;
   padding:0.5rem;
   border:0;
@@ -86,13 +88,15 @@ button,select{padding:.35rem .8rem;font-size:1rem;cursor:pointer}
   pointer-events:none;
   font:inherit;
   line-height:inherit;
-  overflow:visible;
+  overflow:hidden;
   z-index:1;
 }
 
 .highlight-layer code{
   display:block;
   color:#000;
+  margin:0;
+  padding:0;
 }
 
 .editor-textarea{
