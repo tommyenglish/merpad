@@ -629,11 +629,24 @@ function switchToTab(tabId) {
   }
 }
 
+function getNextUntitledNumber() {
+  // Find all tabs with "Untitled X" pattern
+  const untitledNumbers = tabs
+    .map(tab => {
+      const match = tab.name.match(/^Untitled (\d+)$/);
+      return match ? parseInt(match[1]) : 0;
+    })
+    .filter(num => num > 0);
+
+  // Return highest + 1, or 1 if none exist
+  return untitledNumbers.length > 0 ? Math.max(...untitledNumbers) + 1 : 1;
+}
+
 function createNewTab(showPicker = true) {
   saveCurrentTab();
   const newTab = {
     id: nextTabId++,
-    name: `Untitled ${nextTabId - 1}`,
+    name: `Untitled ${getNextUntitledNumber()}`,
     content: ''
   };
   tabs.push(newTab);
