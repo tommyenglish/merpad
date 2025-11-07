@@ -49,25 +49,28 @@
 		</div>
 
 		<div class="group">
-			<label for="templateSelect">New:</label>
-			<select id="templateSelect">
-			  <option value="">Choose template…</option>
-			  <option value="flowchart">Flowchart</option>
-			  <option value="sequence">Sequence Diagram</option>
-			  <option value="gantt">Gantt Chart</option>
-			  <option value="class">Class Diagram</option>
-			  <option value="erDiagram">ER Diagram</option>
-			  <option value="state">State Diagram</option>
-			  <option value="pie">Pie Chart</option>
-			  <option value="gitGraph">Git Graph</option>
-			  <option value="journey">User Journey</option>
-			</select>
-		</div>
-
-		<div class="group">
 			<button id="btnOpen">Open…</button>
 			<button id="btnSave">Save…</button>
 			<input  id="fileOpen" type="file" accept=".mmd,.txt" hidden>
+		</div>
+
+		<div class="group template-group">
+			<button id="templateBtn">Templates ▾</button>
+			<div id="templateMenu" class="template-menu">
+				<div class="template-item" data-template="flowchart">Flowchart</div>
+				<div class="template-item" data-template="sequence">Sequence Diagram</div>
+				<div class="template-item" data-template="gantt">Gantt Chart</div>
+				<div class="template-item" data-template="class">Class Diagram</div>
+				<div class="template-item" data-template="erDiagram">ER Diagram</div>
+				<div class="template-item" data-template="state">State Diagram</div>
+				<div class="template-item" data-template="pie">Pie Chart</div>
+				<div class="template-item" data-template="gitGraph">Git Graph</div>
+				<div class="template-item" data-template="journey">User Journey</div>
+			</div>
+		</div>
+
+		<div class="group">
+			<button id="btnUndo" disabled>↶ Undo</button>
 		</div>
 	</div>
   </div>

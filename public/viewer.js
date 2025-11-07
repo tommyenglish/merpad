@@ -31,6 +31,7 @@ let currentTheme='print';
 let currentLayout='dagre';
 let zoom=1;
 let orientation='horizontal'; // 'vertical' or 'horizontal'
+let undoStack = []; // Stack for undo functionality
 
 /* ========= Theme backgrounds ========= */
 // Define background colors for each theme
@@ -349,24 +350,25 @@ const templates = {
     participant Harry
     participant Hedwig
     participant Ron
-    participant Hogwarts
+    participant Hermione
 
-    Harry->>Hedwig: Write letter
+    Harry->>Hedwig: Write letter to Ron
     activate Hedwig
-    Hedwig->>Hogwarts: Fly to Owlery
-    activate Hogwarts
-    Hogwarts->>Ron: Deliver letter
+    Hedwig->>Ron: Deliver letter
     activate Ron
     Ron-->>Hedwig: Write reply
     deactivate Ron
     Hedwig-->>Harry: Return with response
     deactivate Hedwig
-    deactivate Hogwarts
 
-    Harry->>Ron: Send another message
-    activate Ron
-    Ron-->>Harry: Quick response via Patronus
-    deactivate Ron`,
+    Harry->>Hedwig: Send to Hermione
+    activate Hedwig
+    Hedwig->>Hermione: Deliver letter
+    activate Hermione
+    Hermione-->>Hedwig: Detailed reply (3 pages)
+    deactivate Hermione
+    Hedwig-->>Harry: Exhausted return
+    deactivate Hedwig`,
 
   gantt: `gantt
     title Hogwarts School Year
@@ -430,14 +432,14 @@ const templates = {
         int year
         date birthdate
     }
-    HOUSE ||--|{ STUDENT : belongs_to
+    HOUSE ||--o{ STUDENT : belongs_to
     HOUSE {
         string name PK
         string founder
         string commonRoom
         int points
     }
-    CLASS ||--|{ ENROLLMENT : has
+    CLASS ||--o{ ENROLLMENT : has
     CLASS {
         string id PK
         string name
@@ -458,16 +460,18 @@ const templates = {
     }`,
 
   state: `stateDiagram-v2
-    [*] --> Muggle
-    Muggle --> HogwartsLetter : Turn 11
-    HogwartsLetter --> DiagonAlley : Accept Letter
-    DiagonAlley --> Platform9_3_4 : Buy Supplies
-    Platform9_3_4 --> HogwartsExpress : Board Train
-    HogwartsExpress --> GreatHall : Arrive
-    GreatHall --> Sorted : Sorting Ceremony
-    Sorted --> Student : Join House
-    Student --> Graduated : Complete 7 Years
-    Graduated --> [*]`,
+    [*] --> Human
+    Human --> Bitten : Werewolf Attack
+    Bitten --> Infected : Survive Bite
+    Infected --> Transforming : Full Moon Rises
+    Transforming --> Werewolf : Complete Transformation
+    Werewolf --> Hunting : Night Falls
+    Hunting --> Werewolf : Prowling
+    Werewolf --> Reverting : Dawn Breaks
+    Reverting --> Human : Morning Light
+    Human --> Infected : Monthly Cycle
+    Infected --> Cured : Drink Wolfsbane Potion
+    Cured --> [*]`,
 
   pie: `pie title House Points Championship
     "Gryffindor" : 482
@@ -476,23 +480,26 @@ const templates = {
     "Hufflepuff" : 352`,
 
   gitGraph: `gitGraph
-    commit id: "Sorcerer's Stone"
-    commit id: "Meet Hagrid"
-    branch year2
-    checkout year2
-    commit id: "Chamber of Secrets"
-    commit id: "Basilisk defeated"
+    commit id: "Selected as Champion"
+    commit id: "Study dragons"
+    branch dragon-task
+    checkout dragon-task
+    commit id: "Learn Accio spell"
+    commit id: "Practice on Firebolt"
+    commit id: "Get past Hungarian Horntail"
     checkout main
-    merge year2
-    commit id: "Prisoner of Azkaban"
-    branch timeturner
-    checkout timeturner
-    commit id: "Save Buckbeak"
-    commit id: "Save Sirius"
+    merge dragon-task tag: "Golden-Egg"
+    commit id: "Decode egg clue"
+    branch lake-task
+    checkout lake-task
+    commit id: "Research gillyweed"
+    commit id: "Test breathing underwater"
+    commit id: "Save hostages from lake"
     checkout main
-    merge timeturner tag: "Time-Turner-Fixed"
-    commit id: "Goblet of Fire"
-    commit id: "Triwizard Tournament"`,
+    merge lake-task tag: "Second-Place"
+    commit id: "Prepare for maze"
+    commit id: "Enter maze"
+    commit id: "Grab Triwizard Cup"`,
 
   journey: `journey
     title Harry's First Year at Hogwarts
@@ -515,16 +522,60 @@ const templates = {
 };
 
 /* ========= Template selector ========= */
-const templateSel = $('#templateSelect');
-templateSel.onchange = () => {
-  const templateName = templateSel.value;
-  if (templateName && templates[templateName]) {
-    editor.value = templates[templateName];
+const templateBtn = $('#templateBtn');
+const templateMenu = $('#templateMenu');
+
+// Toggle template menu
+templateBtn.onclick = (e) => {
+  e.stopPropagation();
+  templateMenu.classList.toggle('show');
+};
+
+// Close menu when clicking outside
+document.addEventListener('click', () => {
+  templateMenu.classList.remove('show');
+});
+
+// Prevent menu from closing when clicking inside it
+templateMenu.addEventListener('click', (e) => {
+  e.stopPropagation();
+});
+
+// Handle template selection
+templateMenu.querySelectorAll('.template-item').forEach(item => {
+  item.onclick = () => {
+    const templateName = item.dataset.template;
+    if (templates[templateName]) {
+      // Save current diagram to undo stack
+      if (editor.value.trim()) {
+        undoStack.push(editor.value);
+        // Limit undo stack to 10 items
+        if (undoStack.length > 10) {
+          undoStack.shift();
+        }
+        // Enable undo button
+        $('#btnUndo').disabled = false;
+      }
+      // Load template
+      editor.value = templates[templateName];
+      localStorage.setItem(LS_KEY, editor.value);
+      render();
+    }
+    templateMenu.classList.remove('show');
+  };
+});
+
+/* ========= Undo functionality ========= */
+$('#btnUndo').onclick = () => {
+  if (undoStack.length > 0) {
+    editor.value = undoStack.pop();
     localStorage.setItem(LS_KEY, editor.value);
     render();
+    // Disable undo button if stack is empty
+    if (undoStack.length === 0) {
+      $('#btnUndo').disabled = true;
+    }
   }
-  // Reset dropdown to placeholder
-  templateSel.value = '';
 };
 
 /* ========= Starter diagram ========= */
