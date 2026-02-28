@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Mermaid Viewer</title>
   <link rel="stylesheet" href="viewer.css" />
+  <link rel="stylesheet" href="fontawesome/all.min.css" />
 </head>
 <body>
 
@@ -18,39 +19,36 @@
 			  <option value="dark">Dark</option>
 			  <option value="forest">Forest</option>
 			  <option value="neutral">Neutral</option>
-			  <option value="vibrant">Vibrant (custom)</option>
-			  <option value="print">Print (B/W)</option>
+			  <option value="vibrant">Vibrant (custom)</option>
+			  <option value="print">Print (B/W)</option>
 			</select>
 
 			<label for="layoutSelect">Layout:</label>
 			<select id="layoutSelect">
-			  <option value="dagre">Hierarchical (Dagre)</option>
-			  <option value="elk-layered">Adaptive (ELK layered)</option>
-			  <option value="elk-mrtree">Tree (ELK mrtree)</option>
-			  <option value="elk-radial">Radial (ELK radial)</option>
+			  <option value="dagre">Hierarchical (Dagre)</option>
+			  <option value="elk-layered">Adaptive (ELK layered)</option>
+			  <option value="elk-mrtree">Tree (ELK mrtree)</option>
+			  <option value="elk-radial">Radial (ELK radial)</option>
 			</select>
-		</div>	
+			<button id="layoutToggle" title="Toggle horizontal/vertical layout"><i class="fa-solid fa-table-columns"></i></button>
+		</div>
 
 		<div class="group">
-			<button id="zoomIn">＋</button>
-			<button id="zoomOut">−</button>
-			<button id="zoomReset">100 %</button>
+			<button id="zoomIn" title="Zoom in"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+			<button id="zoomOut" title="Zoom out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+			<button id="zoomReset" title="Reset zoom"><i class="fa-solid fa-expand"></i></button>
 			<span id="dims"></span>
 		</div>
 
 		<div class="group">
-			<button id="layoutToggle" title="Toggle horizontal/vertical layout">⇄</button>
+			<button id="btnSvg" title="Export as SVG"><i class="fa-solid fa-image"></i></button>
+			<button id="btnPng" title="Export as PNG"><i class="fa-solid fa-file-image"></i></button>
+			<button id="btnCopy" title="Copy PNG to clipboard"><i class="fa-solid fa-copy"></i></button>
 		</div>
 
 		<div class="group">
-			<button id="btnSvg">SVG…</button>
-			<button id="btnPng">PNG…</b…utton>
-			<button id="btnCopy">Copy PNG</button>
-		</div>
-
-		<div class="group">
-			<button id="btnOpen">Open…</button>
-			<button id="btnSave">Save…</button>
+			<button id="btnOpen" title="Open file"><i class="fa-solid fa-folder-open"></i></button>
+			<button id="btnSave" title="Save file"><i class="fa-solid fa-floppy-disk"></i></button>
 			<input  id="fileOpen" type="file" accept=".mmd,.txt" hidden>
 		</div>
 	</div>
@@ -58,7 +56,7 @@
 
   <div id="tabBar">
     <div id="tabList">
-      <button id="btnNewTab" title="New tab">+</button>
+      <button id="btnNewTab" title="New tab"><i class="fa-solid fa-plus"></i></button>
     </div>
   </div>
 
