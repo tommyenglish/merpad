@@ -2,7 +2,10 @@
 html,body{margin:0;height:100%;font-family:system-ui,sans-serif;background:#fafafa}
 body{display:grid;grid-template-rows:auto auto 1fr}
 button,select{padding:.35rem .8rem;font-size:1rem;cursor:pointer}
-#dims{font-size:.9rem;color:#444;margin-left:.5rem}
+#dimW,#dimH{width:4em;font-size:.85rem;padding:.2rem .3rem;border:1px solid #bbb;border-radius:3px;text-align:right;font-family:system-ui,sans-serif}
+#dimW:focus,#dimH:focus{outline:none;border-color:#666}
+.dim-sep{font-size:.85rem;color:#666}
+.dim-unit{font-size:.8rem;color:#666}
 
 /* Tab bar */
 #tabBar{display:flex;align-items:center;flex-wrap:wrap;background:#ddd;padding:0.25rem 0.5rem;gap:0.25rem;border-bottom:1px solid #ccc}

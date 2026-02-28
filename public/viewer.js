@@ -66,7 +66,8 @@ applyConfig();
 /* ========= DOM refs ========= */
 const $=q=>document.querySelector(q);
 const editor=$('#editor'),output=$('#diagram');
-const themeSel=$('#themeSelect'),layoutSel=$('#layoutSelect'),dims=$('#dims');
+const themeSel=$('#themeSelect'),layoutSel=$('#layoutSelect');
+const dimW=$('#dimW'),dimH=$('#dimH');
 const divider=$('#divider'),splitContainer=$('#splitContainer');
 const editorWrapper=$('#editorWrapper');
 const layoutToggle=$('#layoutToggle');
@@ -75,14 +76,20 @@ const templatePicker=$('#templatePicker');
 const lineNumbers=$('#lineNumbers');
 
 /* ========= Helpers ========= */
-function updateDims(){
-  const svg=$('svg',output);
-  if(!svg){dims.textContent='';return;}
+function getSvgNaturalSize(){
+  const svg=output.querySelector('svg');
+  if(!svg) return null;
   const {width,height}=svg.getBBox();
-  dims.textContent=`${Math.round(width*zoom)}×${Math.round(height*zoom)} px`;
+  return {width,height};
+}
+function updateDims(){
+  const size=getSvgNaturalSize();
+  if(!size){dimW.value='';dimH.value='';return;}
+  dimW.value=Math.round(size.width*zoom);
+  dimH.value=Math.round(size.height*zoom);
 }
 function applyZoom(){
-  const svg=$('svg',output);
+  const svg=output.querySelector('svg');
   if(svg) svg.style.transform=`scale(${zoom})`;
   updateDims();
 }
@@ -222,6 +229,23 @@ document.addEventListener('mouseup',()=>{
 $('#zoomIn').onclick =()=>{zoom*=1.25;applyZoom();};
 $('#zoomOut').onclick=()=>{zoom/=1.25;applyZoom();};
 $('#zoomReset').onclick=()=>{zoom=1;applyZoom();};
+
+dimW.addEventListener('change',()=>{
+  const size=getSvgNaturalSize();
+  if(!size||!dimW.value) return;
+  zoom=parseInt(dimW.value)/size.width;
+  const svg=output.querySelector('svg');
+  if(svg) svg.style.transform=`scale(${zoom})`;
+  dimH.value=Math.round(size.height*zoom);
+});
+dimH.addEventListener('change',()=>{
+  const size=getSvgNaturalSize();
+  if(!size||!dimH.value) return;
+  zoom=parseInt(dimH.value)/size.height;
+  const svg=output.querySelector('svg');
+  if(svg) svg.style.transform=`scale(${zoom})`;
+  dimW.value=Math.round(size.width*zoom);
+});
 
 let pending;
 editor.addEventListener('input', e => {
