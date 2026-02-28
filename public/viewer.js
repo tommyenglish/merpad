@@ -545,8 +545,8 @@ const templates = {
         string commonRoom
         int points
     }
-    CLASS ||--o{ ENROLLMENT : has
-    CLASS {
+    COURSE ||--o{ ENROLLMENT : has
+    COURSE {
         string id PK
         string name
         string professor
@@ -554,7 +554,7 @@ const templates = {
     }
     ENROLLMENT {
         string studentId FK
-        string classId FK
+        string courseId FK
         string grade
         int attendance
     }
