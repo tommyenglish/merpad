@@ -32,7 +32,7 @@ button,select{padding:.35rem .8rem;font-size:1rem;cursor:pointer}
 
 /* Editor wrapper and editor */
 #editorWrapper{position:relative;overflow:hidden}
-#editor{resize:none;border:none;padding:1rem;font-family:Consolas,monospace;box-sizing:border-box;overflow:auto;width:100%;height:100%}
+#editor{resize:none;border:none;padding:1rem;font-family:Consolas,monospace;box-sizing:border-box;overflow:auto;width:100%;height:100%;white-space:nowrap}
 
 /* Divider */
 #divider{background:#ccc;position:relative;transition:background .2s}
