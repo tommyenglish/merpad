@@ -200,6 +200,24 @@ async function render(){
   }catch(e){output.innerHTML=`<pre style="color:red">${e.message}</pre>`;updateDims();}
 }
 
+/* ========= Diagram panning ========= */
+let isPanning=false,panStartX,panStartY,panScrollLeft,panScrollTop;
+output.addEventListener('mousedown',e=>{
+  isPanning=true;
+  panStartX=e.clientX;panStartY=e.clientY;
+  panScrollLeft=output.scrollLeft;panScrollTop=output.scrollTop;
+  output.style.cursor='grabbing';
+  e.preventDefault();
+});
+document.addEventListener('mousemove',e=>{
+  if(!isPanning)return;
+  output.scrollLeft=panScrollLeft-(e.clientX-panStartX);
+  output.scrollTop=panScrollTop-(e.clientY-panStartY);
+});
+document.addEventListener('mouseup',()=>{
+  if(isPanning){isPanning=false;output.style.cursor='grab';}
+});
+
 /* ========= Event wiring ========= */
 $('#zoomIn').onclick =()=>{zoom*=1.25;applyZoom();};
 $('#zoomOut').onclick=()=>{zoom/=1.25;applyZoom();};

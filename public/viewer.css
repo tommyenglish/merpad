@@ -43,7 +43,7 @@ button,select{padding:.35rem .8rem;font-size:1rem;cursor:pointer}
 #divider:active{background:#999}
 
 /* Diagram - takes remaining space */
-#diagram{flex:1 1 auto;overflow:auto;padding:1rem}
+#diagram{flex:1 1 auto;overflow:auto;padding:1rem;cursor:grab}
 #diagram svg{transform-origin:top left}
 #toolbar {
   display: flex;
