@@ -31,8 +31,11 @@ button,select{padding:.35rem .8rem;font-size:1rem;cursor:pointer}
 #splitContainer.horizontal #divider{flex:0 0 6px;width:6px;height:100%;cursor:col-resize}
 
 /* Editor wrapper and editor */
-#editorWrapper{position:relative;overflow:hidden}
-#editor{resize:none;border:none;padding:1rem;font-family:Consolas,monospace;box-sizing:border-box;overflow:auto;width:100%;height:100%;white-space:nowrap}
+#editorWrapper{position:relative;overflow:hidden;display:flex}
+#lineNumbers{box-sizing:border-box;padding:1rem 0.5rem 1rem 0.75rem;font-family:Consolas,monospace;font-size:16px;line-height:20px;text-align:right;color:#999;background:#f0f0f0;border-right:1px solid #ddd;overflow:hidden;user-select:none;white-space:nowrap;flex-shrink:0}
+#lineNumbers .line-numbers-inner{will-change:transform}
+#lineNumbers .line-numbers-inner div{line-height:20px;height:20px}
+#editor{resize:none;border:none;outline:none;padding:1rem 1rem 1rem 1rem;font-family:Consolas,monospace;font-size:16px;line-height:20px;box-sizing:border-box;overflow:auto;width:100%;height:100%;white-space:nowrap;flex:1;min-width:0}
 
 /* Divider */
 #divider{background:#ccc;position:relative;transition:background .2s}

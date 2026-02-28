@@ -72,6 +72,7 @@ const editorWrapper=$('#editorWrapper');
 const layoutToggle=$('#layoutToggle');
 const tabList=$('#tabList');
 const templatePicker=$('#templatePicker');
+const lineNumbers=$('#lineNumbers');
 
 /* ========= Helpers ========= */
 function updateDims(){
@@ -88,6 +89,21 @@ function applyZoom(){
 function updateDiagramBackground(){
   output.style.backgroundColor=themeBackgrounds[currentTheme]||'#ffffff';
 }
+
+/* ========= Line numbers ========= */
+const lineNumbersInner=document.createElement('div');
+lineNumbersInner.className='line-numbers-inner';
+lineNumbers.appendChild(lineNumbersInner);
+
+function updateLineNumbers(){
+  const count=editor.value.split('\n').length;
+  let html='';
+  for(let i=1;i<=count;i++) html+=`<div>${i}</div>`;
+  lineNumbersInner.innerHTML=html;
+}
+editor.addEventListener('scroll',()=>{
+  lineNumbersInner.style.transform=`translateY(${-editor.scrollTop}px)`;
+});
 
 /* ========= Resizable divider ========= */
 const SPLIT_VERTICAL_KEY = 'merpad-split-vertical';
@@ -191,7 +207,18 @@ $('#zoomReset').onclick=()=>{zoom=1;applyZoom();};
 
 let pending;
 editor.addEventListener('input', e => {
+  updateLineNumbers();
   clearTimeout(pending);
+
+  // Always save on any input
+  saveCurrentTab();
+
+  // Mark tab as modified
+  const tab = tabs.find(t => t.id === activeTabId);
+  if (tab && !tab.modified) {
+    tab.modified = true;
+    renderTabs();
+  }
 
   pending = setTimeout(() => {
     const isWhitespaceOnly =
@@ -201,15 +228,6 @@ editor.addEventListener('input', e => {
 
     if (!isWhitespaceOnly) {
       render();         // auto‑render
-
-      // Mark tab as modified
-      const tab = tabs.find(t => t.id === activeTabId);
-      if (tab && !tab.modified) {
-        tab.modified = true;
-        renderTabs();
-      }
-
-      saveCurrentTab(); // auto‑save tab
 	}
   }, DEBOUNCE);
 });
@@ -275,6 +293,8 @@ fileInput.onchange=()=>{
   const r=new FileReader();
   r.onload=e=>{
     editor.value=e.target.result;
+    updateLineNumbers();
+    templatePicker.classList.add('hidden');
     const tab = tabs.find(t => t.id === activeTabId);
     if (tab) {
       tab.name = file.name.replace(/\.mmd$/, '');
@@ -601,7 +621,7 @@ function loadTabs() {
     createNewTab();
   } else {
     renderTabs();
-    switchToTab(activeTabId);
+    switchToTab(activeTabId, true);
   }
 }
 
@@ -630,12 +650,13 @@ function renderTabs() {
   tabList.appendChild(newTabBtn);
 }
 
-function switchToTab(tabId) {
-  saveCurrentTab();
+function switchToTab(tabId, skipSave) {
+  if (!skipSave) saveCurrentTab();
   activeTabId = tabId;
   const tab = tabs.find(t => t.id === tabId);
   if (tab) {
     editor.value = tab.content;
+    updateLineNumbers();
     renderTabs();
     render();
 
@@ -670,6 +691,7 @@ function createNewTab(showPicker = true) {
   tabs.push(newTab);
   activeTabId = newTab.id;
   editor.value = '';
+  updateLineNumbers();
   saveTabs();
   renderTabs();
 
@@ -718,6 +740,7 @@ templatePicker.querySelectorAll('.template-card').forEach(card => {
     const templateName = card.dataset.template;
     if (templates[templateName]) {
       editor.value = templates[templateName];
+      updateLineNumbers();
       const tab = tabs.find(t => t.id === activeTabId);
       if (tab) {
         tab.modified = true; // Template selected, needs to be saved
@@ -739,3 +762,6 @@ $('#btnSkipTemplate').onclick = () => {
 /* ========= Initialize ========= */
 updateDiagramBackground();
 loadTabs();
+updateLineNumbers();
+
+window.addEventListener('beforeunload',()=>{saveCurrentTab();});
