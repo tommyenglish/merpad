@@ -40,16 +40,20 @@ export function renderTabs(tabList, btnNewTab) {
   tabList.innerHTML = '';
 
   state.tabs.forEach(tab => {
+    const isActive = tab.id === state.activeTabId;
     const tabEl = document.createElement('div');
-    tabEl.className = 'tab' + (tab.id === state.activeTabId ? ' active' : '');
+    tabEl.className = 'tab' + (isActive ? ' active' : '');
+    tabEl.setAttribute('role', 'tab');
+    tabEl.setAttribute('aria-selected', String(isActive));
+    tabEl.setAttribute('tabindex', isActive ? '0' : '-1');
+    tabEl.dataset.tabId = tab.id;
     const modifiedIndicator = tab.modified ? ' *' : '';
     tabEl.innerHTML = `
       <span class="tab-name">${tab.name}${modifiedIndicator}</span>
-      <span class="tab-close" data-tab-id="${tab.id}">\u00d7</span>
+      <span class="tab-close" data-tab-id="${tab.id}" aria-label="Close ${tab.name}" role="button" tabindex="-1">\u00d7</span>
     `;
     tabEl.addEventListener('click', (e) => {
       if (!e.target.classList.contains('tab-close')) {
-        // switchToTab is wired in viewer.js via the tabList click delegation
         tabEl.dispatchEvent(new CustomEvent('tab-switch', { bubbles: true, detail: { tabId: tab.id } }));
       }
     });

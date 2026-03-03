@@ -238,28 +238,100 @@ tabList.addEventListener('tab-switch', (e) => {
   doSwitchToTab(e.detail.tabId);
 });
 
+/* ========= Tab keyboard navigation ========= */
+tabList.addEventListener('keydown', (e) => {
+  const tabs = [...tabList.querySelectorAll('[role="tab"]')];
+  const currentIndex = tabs.indexOf(e.target);
+  if (currentIndex === -1) return;
+
+  let nextIndex;
+  switch (e.key) {
+    case 'ArrowRight':
+      nextIndex = (currentIndex + 1) % tabs.length;
+      break;
+    case 'ArrowLeft':
+      nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+      break;
+    case 'Enter':
+    case ' ':
+      e.preventDefault();
+      doSwitchToTab(parseInt(e.target.dataset.tabId));
+      return;
+    case 'Delete':
+    case 'Backspace':
+      e.preventDefault();
+      doCloseTab(parseInt(e.target.dataset.tabId));
+      return;
+    default:
+      return;
+  }
+
+  e.preventDefault();
+  tabs[nextIndex].focus();
+});
+
 /* ========= Template picker ========= */
+function selectTemplate(card) {
+  const templateName = card.dataset.template;
+  if (templates[templateName]) {
+    editor.value = templates[templateName];
+    doUpdateLineNumbers();
+    const tab = state.tabs.find(t => t.id === state.activeTabId);
+    if (tab) { tab.modified = true; }
+    saveCurrentTab();
+    templatePicker.classList.add('hidden');
+    doRenderTabs();
+    doRender();
+    editor.focus();
+  }
+}
+
 templatePicker.querySelectorAll('.template-card').forEach(card => {
-  card.onclick = () => {
-    const templateName = card.dataset.template;
-    if (templates[templateName]) {
-      editor.value = templates[templateName];
-      doUpdateLineNumbers();
-      const tab = state.tabs.find(t => t.id === state.activeTabId);
-      if (tab) { tab.modified = true; }
-      saveCurrentTab();
-      templatePicker.classList.add('hidden');
-      doRenderTabs();
-      doRender();
-      editor.focus();
-    }
-  };
+  card.onclick = () => selectTemplate(card);
 });
 
 $('#btnSkipTemplate').onclick = () => {
   templatePicker.classList.add('hidden');
   editor.focus();
 };
+
+/* ========= Template picker keyboard navigation ========= */
+templatePicker.addEventListener('keydown', (e) => {
+  const cards = [...templatePicker.querySelectorAll('.template-card')];
+  const currentIndex = cards.indexOf(e.target);
+  if (currentIndex === -1) return;
+
+  let nextIndex;
+  switch (e.key) {
+    case 'ArrowRight':
+      nextIndex = Math.min(currentIndex + 1, cards.length - 1);
+      break;
+    case 'ArrowLeft':
+      nextIndex = Math.max(currentIndex - 1, 0);
+      break;
+    case 'ArrowDown':
+      nextIndex = Math.min(currentIndex + 3, cards.length - 1);
+      break;
+    case 'ArrowUp':
+      nextIndex = Math.max(currentIndex - 3, 0);
+      break;
+    case 'Enter':
+    case ' ':
+      e.preventDefault();
+      selectTemplate(e.target);
+      return;
+    case 'Escape':
+      e.preventDefault();
+      templatePicker.classList.add('hidden');
+      editor.focus();
+      return;
+    default:
+      return;
+  }
+
+  e.preventDefault();
+  cards[nextIndex].focus();
+});
 
 /* ========= Initialize ========= */
 updateDiagramBackground(output);

@@ -30,88 +30,88 @@
 			  <option value="elk-mrtree">Tree (ELK mrtree)</option>
 			  <option value="elk-radial">Radial (ELK radial)</option>
 			</select>
-			<button id="layoutToggle" title="Toggle horizontal/vertical layout"><i class="fa-solid fa-table-columns"></i></button>
+			<button id="layoutToggle" title="Toggle horizontal/vertical layout" aria-label="Toggle horizontal/vertical layout"><i class="fa-solid fa-table-columns"></i></button>
 		</div>
 
 		<div class="group">
-			<button id="zoomIn" title="Zoom in"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
-			<button id="zoomOut" title="Zoom out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
-			<button id="zoomReset" title="Reset zoom"><i class="fa-solid fa-expand"></i></button>
-			<input id="dimW" type="number" min="1" title="Width (px)">
+			<button id="zoomIn" title="Zoom in" aria-label="Zoom in"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+			<button id="zoomOut" title="Zoom out" aria-label="Zoom out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+			<button id="zoomReset" title="Reset zoom" aria-label="Reset zoom"><i class="fa-solid fa-expand"></i></button>
+			<input id="dimW" type="number" min="1" title="Width (px)" aria-label="Width in pixels">
 			<span class="dim-sep">&times;</span>
-			<input id="dimH" type="number" min="1" title="Height (px)">
+			<input id="dimH" type="number" min="1" title="Height (px)" aria-label="Height in pixels">
 			<span class="dim-unit">px</span>
 		</div>
 
 		<div class="group">
-			<button id="btnSvg" title="Export as SVG"><i class="fa-solid fa-image"></i></button>
-			<button id="btnPng" title="Export as PNG"><i class="fa-solid fa-file-image"></i></button>
-			<button id="btnCopy" title="Copy PNG to clipboard"><i class="fa-solid fa-copy"></i></button>
+			<button id="btnSvg" title="Export as SVG" aria-label="Export as SVG"><i class="fa-solid fa-image"></i></button>
+			<button id="btnPng" title="Export as PNG" aria-label="Export as PNG"><i class="fa-solid fa-file-image"></i></button>
+			<button id="btnCopy" title="Copy PNG to clipboard" aria-label="Copy PNG to clipboard"><i class="fa-solid fa-copy"></i></button>
 		</div>
 
 		<div class="group">
-			<button id="btnOpen" title="Open file"><i class="fa-solid fa-folder-open"></i></button>
-			<button id="btnSave" title="Save file"><i class="fa-solid fa-floppy-disk"></i></button>
+			<button id="btnOpen" title="Open file" aria-label="Open file"><i class="fa-solid fa-folder-open"></i></button>
+			<button id="btnSave" title="Save file" aria-label="Save file"><i class="fa-solid fa-floppy-disk"></i></button>
 			<input  id="fileOpen" type="file" accept=".mmd,.txt" hidden>
 		</div>
 	</div>
   </div>
 
   <div id="tabBar">
-    <div id="tabList">
-      <button id="btnNewTab" title="New tab"><i class="fa-solid fa-plus"></i></button>
+    <div id="tabList" role="tablist">
+      <button id="btnNewTab" title="New tab" aria-label="New tab"><i class="fa-solid fa-plus"></i></button>
     </div>
   </div>
 
   <div id="splitContainer">
     <div id="editorWrapper">
-      <div id="lineNumbers"></div>
-      <textarea id="editor" spellcheck="false"></textarea>
+      <div id="lineNumbers" aria-hidden="true"></div>
+      <textarea id="editor" spellcheck="false" aria-label="Mermaid diagram editor"></textarea>
       <div id="templatePicker" class="template-picker hidden">
         <h3>Start with a template or type your own diagram</h3>
-        <div class="template-grid">
-          <div class="template-card" data-template="flowchart">
-            <div class="template-icon">🌊</div>
+        <div class="template-grid" role="grid">
+          <div class="template-card" data-template="flowchart" tabindex="0" role="gridcell">
+            <div class="template-icon" aria-hidden="true">🌊</div>
             <div class="template-name">Flowchart</div>
           </div>
-          <div class="template-card" data-template="sequence">
-            <div class="template-icon">↔️</div>
+          <div class="template-card" data-template="sequence" tabindex="0" role="gridcell">
+            <div class="template-icon" aria-hidden="true">↔️</div>
             <div class="template-name">Sequence</div>
           </div>
-          <div class="template-card" data-template="gantt">
-            <div class="template-icon">📅</div>
+          <div class="template-card" data-template="gantt" tabindex="0" role="gridcell">
+            <div class="template-icon" aria-hidden="true">📅</div>
             <div class="template-name">Gantt</div>
           </div>
-          <div class="template-card" data-template="class">
-            <div class="template-icon">📦</div>
+          <div class="template-card" data-template="class" tabindex="0" role="gridcell">
+            <div class="template-icon" aria-hidden="true">📦</div>
             <div class="template-name">Class</div>
           </div>
-          <div class="template-card" data-template="erDiagram">
-            <div class="template-icon">🗃️</div>
+          <div class="template-card" data-template="erDiagram" tabindex="0" role="gridcell">
+            <div class="template-icon" aria-hidden="true">🗃️</div>
             <div class="template-name">ER Diagram</div>
           </div>
-          <div class="template-card" data-template="state">
-            <div class="template-icon">🔄</div>
+          <div class="template-card" data-template="state" tabindex="0" role="gridcell">
+            <div class="template-icon" aria-hidden="true">🔄</div>
             <div class="template-name">State</div>
           </div>
-          <div class="template-card" data-template="pie">
-            <div class="template-icon">🥧</div>
+          <div class="template-card" data-template="pie" tabindex="0" role="gridcell">
+            <div class="template-icon" aria-hidden="true">🥧</div>
             <div class="template-name">Pie Chart</div>
           </div>
-          <div class="template-card" data-template="gitGraph">
-            <div class="template-icon">🌳</div>
+          <div class="template-card" data-template="gitGraph" tabindex="0" role="gridcell">
+            <div class="template-icon" aria-hidden="true">🌳</div>
             <div class="template-name">Git Graph</div>
           </div>
-          <div class="template-card" data-template="journey">
-            <div class="template-icon">🗺️</div>
+          <div class="template-card" data-template="journey" tabindex="0" role="gridcell">
+            <div class="template-icon" aria-hidden="true">🗺️</div>
             <div class="template-name">Journey</div>
           </div>
         </div>
         <button id="btnSkipTemplate" class="skip-template">Skip - Start blank</button>
       </div>
     </div>
-    <div id="divider"></div>
-    <div id="diagram"></div>
+    <div id="divider" role="separator" aria-orientation="vertical"></div>
+    <div id="diagram" role="tabpanel"></div>
   </div>
 
   <script type="module" src="viewer.js"></script>
