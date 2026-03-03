@@ -1,4 +1,4 @@
-import { state, LS_TABS_KEY, LS_ACTIVE_TAB_KEY } from './state.js';
+import { state, LS_TABS_KEY, LS_ACTIVE_TAB_KEY, storageGet, storageSet, storageGetJSON } from './state.js';
 
 export function saveCurrentTab() {
   if (state.activeTabId !== null) {
@@ -11,16 +11,16 @@ export function saveCurrentTab() {
 }
 
 export function saveTabs() {
-  localStorage.setItem(LS_TABS_KEY, JSON.stringify(state.tabs));
-  localStorage.setItem(LS_ACTIVE_TAB_KEY, state.activeTabId);
+  storageSet(LS_TABS_KEY, JSON.stringify(state.tabs));
+  storageSet(LS_ACTIVE_TAB_KEY, state.activeTabId);
 }
 
 export function loadTabs({ editor, output, tabList, templatePicker, updateLineNumbers, render, renderTabs, switchToTab, createNewTab }) {
-  const savedTabs = localStorage.getItem(LS_TABS_KEY);
-  const savedActiveId = localStorage.getItem(LS_ACTIVE_TAB_KEY);
+  const savedTabs = storageGetJSON(LS_TABS_KEY, null);
+  const savedActiveId = storageGet(LS_ACTIVE_TAB_KEY);
 
-  if (savedTabs) {
-    state.tabs = JSON.parse(savedTabs);
+  if (Array.isArray(savedTabs)) {
+    state.tabs = savedTabs;
     state.tabs.forEach(tab => {
       if (tab.modified === undefined) tab.modified = false;
     });

@@ -35,6 +35,31 @@ export const MIN_SPLIT_SIZE = 100;
 export const DEFAULT_SPLIT_VERTICAL = '200px';
 export const DEFAULT_SPLIT_HORIZONTAL = '30%';
 
+/* ========= Safe localStorage helpers ========= */
+export function storageGet(key) {
+  try { return localStorage.getItem(key); }
+  catch { return null; }
+}
+
+export function storageSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    if (e.name === 'QuotaExceededError') {
+      alert('Storage is full. Some data may not be saved.');
+    }
+  }
+}
+
+export function storageGetJSON(key, fallback = null) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw !== null ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 /* ========= Mutable application state ========= */
 export const state = {
   currentTheme: 'print',

@@ -1,4 +1,4 @@
-import { state, DEBOUNCE, ZOOM_FACTOR, MIN_SPLIT_SIZE, DEFAULT_SPLIT_VERTICAL, DEFAULT_SPLIT_HORIZONTAL } from './state.js';
+import { state, DEBOUNCE, ZOOM_FACTOR, MIN_SPLIT_SIZE, DEFAULT_SPLIT_VERTICAL, DEFAULT_SPLIT_HORIZONTAL, storageGet, storageSet } from './state.js';
 import { templates } from './templates.js';
 import { applyConfig, render, applyZoom, getSvgNaturalSize, updateDims, updateDiagramBackground } from './render.js';
 import { saveCurrentTab, saveTabs, loadTabs, renderTabs as renderTabsRaw, switchToTab as switchToTabRaw, createNewTab as createNewTabRaw, closeTab as closeTabRaw } from './tabs.js';
@@ -71,7 +71,7 @@ const SPLIT_HORIZONTAL_KEY = 'merpad-split-horizontal';
 const ORIENTATION_KEY = 'merpad-orientation';
 let isDragging = false;
 
-const savedOrientation = localStorage.getItem(ORIENTATION_KEY);
+const savedOrientation = storageGet(ORIENTATION_KEY);
 if (savedOrientation && (savedOrientation === 'vertical' || savedOrientation === 'horizontal')) {
   state.orientation = savedOrientation;
 }
@@ -79,7 +79,7 @@ splitContainer.classList.add(state.orientation);
 
 function restoreSplitPosition() {
   const key = state.orientation === 'vertical' ? SPLIT_VERTICAL_KEY : SPLIT_HORIZONTAL_KEY;
-  const savedSplit = localStorage.getItem(key);
+  const savedSplit = storageGet(key);
   if (savedSplit) {
     editorWrapper.style.flexBasis = savedSplit + 'px';
   } else {
@@ -92,7 +92,7 @@ layoutToggle.onclick = () => {
   splitContainer.classList.remove(state.orientation);
   state.orientation = state.orientation === 'vertical' ? 'horizontal' : 'vertical';
   splitContainer.classList.add(state.orientation);
-  localStorage.setItem(ORIENTATION_KEY, state.orientation);
+  storageSet(ORIENTATION_KEY, state.orientation);
   restoreSplitPosition();
 };
 
@@ -131,7 +131,7 @@ document.addEventListener('mouseup', () => {
     const currentSize = parseInt(editorWrapper.style.flexBasis);
     if (!isNaN(currentSize)) {
       const key = state.orientation === 'vertical' ? SPLIT_VERTICAL_KEY : SPLIT_HORIZONTAL_KEY;
-      localStorage.setItem(key, currentSize);
+      storageSet(key, currentSize);
     }
   }
 });
