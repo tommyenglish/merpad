@@ -8,8 +8,8 @@
   "scripts": {
     "postinstall": "node scripts/copy-assets.js",
     "dev": "npm run copy && python -m http.server 8000 -d public",
-    "copy": "node scripts/copy-assets.js",
-    "build": "rollup -c"
+    "copy": "node scripts/copy-assets.js && node scripts/stamp-version.js",
+    "build": "rollup -c && node scripts/stamp-version.js"
   },
   "dependencies": {
     "@mermaid-js/layout-elk": "^0.2.0",
