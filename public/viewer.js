@@ -1,4 +1,4 @@
-import { state, DEBOUNCE } from './state.js';
+import { state, DEBOUNCE, ZOOM_FACTOR, MIN_SPLIT_SIZE, DEFAULT_SPLIT_VERTICAL, DEFAULT_SPLIT_HORIZONTAL } from './state.js';
 import { templates } from './templates.js';
 import { applyConfig, render, applyZoom, getSvgNaturalSize, updateDims, updateDiagramBackground } from './render.js';
 import { saveCurrentTab, saveTabs, loadTabs, renderTabs as renderTabsRaw, switchToTab as switchToTabRaw, createNewTab as createNewTabRaw, closeTab as closeTabRaw } from './tabs.js';
@@ -83,7 +83,7 @@ function restoreSplitPosition() {
   if (savedSplit) {
     editorWrapper.style.flexBasis = savedSplit + 'px';
   } else {
-    editorWrapper.style.flexBasis = state.orientation === 'vertical' ? '200px' : '30%';
+    editorWrapper.style.flexBasis = state.orientation === 'vertical' ? DEFAULT_SPLIT_VERTICAL : DEFAULT_SPLIT_HORIZONTAL;
   }
 }
 restoreSplitPosition();
@@ -106,7 +106,7 @@ divider.addEventListener('mousedown', (e) => {
 document.addEventListener('mousemove', (e) => {
   if (!isDragging) return;
   const containerRect = splitContainer.getBoundingClientRect();
-  const minSize = 100;
+  const minSize = MIN_SPLIT_SIZE;
 
   if (state.orientation === 'vertical') {
     const newEditorHeight = e.clientY - containerRect.top;
@@ -155,8 +155,8 @@ document.addEventListener('mouseup', () => {
 });
 
 /* ========= Event wiring ========= */
-$('#zoomIn').onclick = () => { state.zoom *= 1.25; doApplyZoom(); };
-$('#zoomOut').onclick = () => { state.zoom /= 1.25; doApplyZoom(); };
+$('#zoomIn').onclick = () => { state.zoom *= ZOOM_FACTOR; doApplyZoom(); };
+$('#zoomOut').onclick = () => { state.zoom /= ZOOM_FACTOR; doApplyZoom(); };
 $('#zoomReset').onclick = () => { state.zoom = 1; doApplyZoom(); };
 
 dimW.addEventListener('change', () => {
