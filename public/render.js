@@ -7,14 +7,16 @@ window.mermaid = mermaid;
 
 export function applyConfig() {
   const cfg = structuredClone(themes[state.currentTheme]);
+  // Disable responsive SVG sizing so diagrams hold their size with scrollbars
+  cfg.useMaxWidth = false;
   if (state.currentLayout === 'dagre') {
     cfg.layout = 'dagre';
-    cfg.flowchart = { defaultRenderer: 'dagre-wrapper' };
+    cfg.flowchart = { defaultRenderer: 'dagre-wrapper', useMaxWidth: false };
   } else {
     const algo = state.currentLayout.split('-')[1];
     cfg.layout = 'elk';
     cfg.elk = { algorithm: algo };
-    cfg.flowchart = { defaultRenderer: 'elk' };
+    cfg.flowchart = { defaultRenderer: 'elk', useMaxWidth: false };
   }
   mermaid.initialize(cfg);
 }

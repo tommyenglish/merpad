@@ -53,7 +53,7 @@ button,select{padding:.35rem .8rem;font-size:1rem;cursor:pointer}
 
 /* Diagram - takes remaining space */
 #diagram{flex:1 1 auto;overflow:auto;padding:1rem;cursor:grab}
-#diagram svg{transform-origin:top left}
+#diagram svg{transform-origin:top left;max-width:none !important;width:auto !important}
 #toolbar {
   display: flex;
   flex-direction: column;

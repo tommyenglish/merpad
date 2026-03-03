@@ -69,8 +69,6 @@ editor.addEventListener('scroll', () => {
 const SPLIT_VERTICAL_KEY = 'merpad-split-vertical';
 const SPLIT_HORIZONTAL_KEY = 'merpad-split-horizontal';
 const ORIENTATION_KEY = 'merpad-orientation';
-let isDragging = false;
-
 const savedOrientation = storageGet(ORIENTATION_KEY);
 if (savedOrientation && (savedOrientation === 'vertical' || savedOrientation === 'horizontal')) {
   state.orientation = savedOrientation;
@@ -96,15 +94,7 @@ layoutToggle.onclick = () => {
   restoreSplitPosition();
 };
 
-divider.addEventListener('mousedown', (e) => {
-  isDragging = true;
-  e.preventDefault();
-  document.body.style.userSelect = 'none';
-  document.body.style.cursor = state.orientation === 'vertical' ? 'row-resize' : 'col-resize';
-});
-
-document.addEventListener('mousemove', (e) => {
-  if (!isDragging) return;
+function onDividerMove(e) {
   const containerRect = splitContainer.getBoundingClientRect();
   const minSize = MIN_SPLIT_SIZE;
 
@@ -121,37 +111,49 @@ document.addEventListener('mousemove', (e) => {
       editorWrapper.style.flexBasis = newEditorWidth + 'px';
     }
   }
-});
+}
 
-document.addEventListener('mouseup', () => {
-  if (isDragging) {
-    isDragging = false;
-    document.body.style.userSelect = '';
-    document.body.style.cursor = '';
-    const currentSize = parseInt(editorWrapper.style.flexBasis);
-    if (!isNaN(currentSize)) {
-      const key = state.orientation === 'vertical' ? SPLIT_VERTICAL_KEY : SPLIT_HORIZONTAL_KEY;
-      storageSet(key, currentSize);
-    }
+function onDividerUp() {
+  document.removeEventListener('mousemove', onDividerMove);
+  document.removeEventListener('mouseup', onDividerUp);
+  document.body.style.userSelect = '';
+  document.body.style.cursor = '';
+  const currentSize = parseInt(editorWrapper.style.flexBasis);
+  if (!isNaN(currentSize)) {
+    const key = state.orientation === 'vertical' ? SPLIT_VERTICAL_KEY : SPLIT_HORIZONTAL_KEY;
+    storageSet(key, currentSize);
   }
+}
+
+divider.addEventListener('mousedown', (e) => {
+  e.preventDefault();
+  document.body.style.userSelect = 'none';
+  document.body.style.cursor = state.orientation === 'vertical' ? 'row-resize' : 'col-resize';
+  document.addEventListener('mousemove', onDividerMove);
+  document.addEventListener('mouseup', onDividerUp);
 });
 
 /* ========= Diagram panning ========= */
-let isPanning = false, panStartX, panStartY, panScrollLeft, panScrollTop;
+let panStartX, panStartY, panScrollLeft, panScrollTop;
+
+function onPanMove(e) {
+  output.scrollLeft = panScrollLeft - (e.clientX - panStartX);
+  output.scrollTop = panScrollTop - (e.clientY - panStartY);
+}
+
+function onPanUp() {
+  document.removeEventListener('mousemove', onPanMove);
+  document.removeEventListener('mouseup', onPanUp);
+  output.style.cursor = 'grab';
+}
+
 output.addEventListener('mousedown', e => {
-  isPanning = true;
   panStartX = e.clientX; panStartY = e.clientY;
   panScrollLeft = output.scrollLeft; panScrollTop = output.scrollTop;
   output.style.cursor = 'grabbing';
   e.preventDefault();
-});
-document.addEventListener('mousemove', e => {
-  if (!isPanning) return;
-  output.scrollLeft = panScrollLeft - (e.clientX - panStartX);
-  output.scrollTop = panScrollTop - (e.clientY - panStartY);
-});
-document.addEventListener('mouseup', () => {
-  if (isPanning) { isPanning = false; output.style.cursor = 'grab'; }
+  document.addEventListener('mousemove', onPanMove);
+  document.addEventListener('mouseup', onPanUp);
 });
 
 /* ========= Event wiring ========= */
