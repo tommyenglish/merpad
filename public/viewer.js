@@ -1,115 +1,68 @@
-/* ========= Import and register things */
-import mermaid from './mermaid.esm.min.mjs';
-import elkLayouts from './mermaid-layout-elk.esm.min.mjs'; 
-
-mermaid.registerLayoutLoaders(elkLayouts);
-
-window.mermaid = mermaid;
-
-/* ========= Themes ========= */
-const themes = {
-  default:{theme:'default'},
-  dark:{theme:'dark'},
-  forest:{theme:'forest'},
-  neutral:{theme:'neutral'},
-  vibrant:{
-    theme:'base',
-    themeVariables:{
-      primaryColor:'#ff0066',primaryTextColor:'#fff',
-      lineColor:'#ff0066',secondaryColor:'#ffeeea',
-      tertiaryColor:'#ffe0e8',nodeTextColor:'#222'}},
-  print:{
-    theme:'base',
-    themeVariables:{background:'#fff',primaryColor:'#fff',
-      primaryTextColor:'#000',lineColor:'#000',nodeTextColor:'#000'}}
-};
-
-/* ========= State ========= */
-const LS_TABS_KEY = 'merpad-tabs';
-const LS_ACTIVE_TAB_KEY = 'merpad-active-tab';
-const DEBOUNCE = 400; // ms to wait after last keystroke
-let currentTheme='print';
-let currentLayout='dagre';
-let zoom=1;
-let orientation='horizontal'; // 'vertical' or 'horizontal'
-let tabs = []; // Array of tab objects {id, name, content, modified}
-let activeTabId = null; // Currently active tab ID
-let nextTabId = 1; // Counter for tab IDs
-
-/* ========= Theme backgrounds ========= */
-// Define background colors for each theme
-const themeBackgrounds = {
-  default: '#ffffff',
-  dark: '#1e1e1e',
-  forest: '#f4f4f4',
-  neutral: '#ffffff',
-  vibrant: '#1a1a1a',
-  print: '#ffffff'
-};
-
-/* ========= Apply mermaid config ========= */
-function applyConfig(){
-  const cfg=structuredClone(themes[currentTheme]);
-  if(currentLayout==='dagre'){
-    cfg.layout='dagre';
-    cfg.flowchart={defaultRenderer:'dagre-wrapper'};
-  }else{
-    const algo=currentLayout.split('-')[1];           // layered | mrtree | radial
-    cfg.layout='elk';
-    cfg.elk={algorithm:algo};
-    cfg.flowchart={defaultRenderer:'elk'};
-  }
-  mermaid.initialize(cfg);
-}
-applyConfig();
+import { state, DEBOUNCE } from './state.js';
+import { templates } from './templates.js';
+import { applyConfig, render, applyZoom, getSvgNaturalSize, updateDims, updateDiagramBackground } from './render.js';
+import { saveCurrentTab, saveTabs, loadTabs, renderTabs as renderTabsRaw, switchToTab as switchToTabRaw, createNewTab as createNewTabRaw, closeTab as closeTabRaw } from './tabs.js';
+import { setupSaveButton, setupOpenButton, setupExportButtons } from './fileio.js';
 
 /* ========= DOM refs ========= */
-const $=q=>document.querySelector(q);
-const editor=$('#editor'),output=$('#diagram');
-const themeSel=$('#themeSelect'),layoutSel=$('#layoutSelect');
-const dimW=$('#dimW'),dimH=$('#dimH');
-const divider=$('#divider'),splitContainer=$('#splitContainer');
-const editorWrapper=$('#editorWrapper');
-const layoutToggle=$('#layoutToggle');
-const tabList=$('#tabList');
-const templatePicker=$('#templatePicker');
-const lineNumbers=$('#lineNumbers');
+const $ = q => document.querySelector(q);
+const editor = $('#editor'), output = $('#diagram');
+const themeSel = $('#themeSelect'), layoutSel = $('#layoutSelect');
+const dimW = $('#dimW'), dimH = $('#dimH');
+const divider = $('#divider'), splitContainer = $('#splitContainer');
+const editorWrapper = $('#editorWrapper');
+const layoutToggle = $('#layoutToggle');
+const tabList = $('#tabList');
+const templatePicker = $('#templatePicker');
+const lineNumbers = $('#lineNumbers');
+const btnNewTab = $('#btnNewTab');
 
-/* ========= Helpers ========= */
-function getSvgNaturalSize(){
-  const svg=output.querySelector('svg');
-  if(!svg) return null;
-  const {width,height}=svg.getBBox();
-  return {width,height};
+/* ========= Bound helpers ========= */
+function doRender() { render(editor, output, dimW, dimH); }
+function doApplyZoom() { applyZoom(output, dimW, dimH); }
+function doUpdateLineNumbers() {
+  const count = editor.value.split('\n').length;
+  let html = '';
+  for (let i = 1; i <= count; i++) html += `<div>${i}</div>`;
+  lineNumbersInner.innerHTML = html;
 }
-function updateDims(){
-  const size=getSvgNaturalSize();
-  if(!size){dimW.value='';dimH.value='';return;}
-  dimW.value=Math.round(size.width*zoom);
-  dimH.value=Math.round(size.height*zoom);
+function doRenderTabs() { renderTabsRaw(tabList, btnNewTab); }
+function doSwitchToTab(tabId, skipSave) {
+  switchToTabRaw(tabId, {
+    editor, output, dimW, dimH, templatePicker,
+    updateLineNumbers: doUpdateLineNumbers,
+    render: doRender,
+    renderTabs: doRenderTabs,
+    skipSave
+  });
 }
-function applyZoom(){
-  const svg=output.querySelector('svg');
-  if(svg) svg.style.transform=`scale(${zoom})`;
-  updateDims();
+function doCreateNewTab(showPicker = true) {
+  createNewTabRaw({
+    editor, output, templatePicker,
+    updateLineNumbers: doUpdateLineNumbers,
+    saveTabs,
+    renderTabs: doRenderTabs,
+    showPicker
+  });
 }
-function updateDiagramBackground(){
-  output.style.backgroundColor=themeBackgrounds[currentTheme]||'#ffffff';
+function doCloseTab(tabId) {
+  closeTabRaw(tabId, {
+    switchToTab: doSwitchToTab,
+    createNewTab: doCreateNewTab,
+    renderTabs: doRenderTabs
+  });
 }
+
+/* ========= Apply initial config ========= */
+applyConfig();
 
 /* ========= Line numbers ========= */
-const lineNumbersInner=document.createElement('div');
-lineNumbersInner.className='line-numbers-inner';
+const lineNumbersInner = document.createElement('div');
+lineNumbersInner.className = 'line-numbers-inner';
 lineNumbers.appendChild(lineNumbersInner);
 
-function updateLineNumbers(){
-  const count=editor.value.split('\n').length;
-  let html='';
-  for(let i=1;i<=count;i++) html+=`<div>${i}</div>`;
-  lineNumbersInner.innerHTML=html;
-}
-editor.addEventListener('scroll',()=>{
-  lineNumbersInner.style.transform=`translateY(${-editor.scrollTop}px)`;
+editor.addEventListener('scroll', () => {
+  lineNumbersInner.style.transform = `translateY(${-editor.scrollTop}px)`;
 });
 
 /* ========= Resizable divider ========= */
@@ -118,37 +71,28 @@ const SPLIT_HORIZONTAL_KEY = 'merpad-split-horizontal';
 const ORIENTATION_KEY = 'merpad-orientation';
 let isDragging = false;
 
-// Restore saved orientation
 const savedOrientation = localStorage.getItem(ORIENTATION_KEY);
 if (savedOrientation && (savedOrientation === 'vertical' || savedOrientation === 'horizontal')) {
-  orientation = savedOrientation;
+  state.orientation = savedOrientation;
 }
-splitContainer.classList.add(orientation);
+splitContainer.classList.add(state.orientation);
 
-// Restore saved split position
 function restoreSplitPosition() {
-  const key = orientation === 'vertical' ? SPLIT_VERTICAL_KEY : SPLIT_HORIZONTAL_KEY;
+  const key = state.orientation === 'vertical' ? SPLIT_VERTICAL_KEY : SPLIT_HORIZONTAL_KEY;
   const savedSplit = localStorage.getItem(key);
   if (savedSplit) {
     editorWrapper.style.flexBasis = savedSplit + 'px';
   } else {
-    // Reset to default
-    editorWrapper.style.flexBasis = orientation === 'vertical' ? '200px' : '30%';
+    editorWrapper.style.flexBasis = state.orientation === 'vertical' ? '200px' : '30%';
   }
 }
 restoreSplitPosition();
 
-// Toggle layout orientation
 layoutToggle.onclick = () => {
-  // Remove current class and toggle orientation
-  splitContainer.classList.remove(orientation);
-  orientation = orientation === 'vertical' ? 'horizontal' : 'vertical';
-  splitContainer.classList.add(orientation);
-
-  // Save orientation preference
-  localStorage.setItem(ORIENTATION_KEY, orientation);
-
-  // Restore split position for new orientation
+  splitContainer.classList.remove(state.orientation);
+  state.orientation = state.orientation === 'vertical' ? 'horizontal' : 'vertical';
+  splitContainer.classList.add(state.orientation);
+  localStorage.setItem(ORIENTATION_KEY, state.orientation);
   restoreSplitPosition();
 };
 
@@ -156,26 +100,23 @@ divider.addEventListener('mousedown', (e) => {
   isDragging = true;
   e.preventDefault();
   document.body.style.userSelect = 'none';
-  document.body.style.cursor = orientation === 'vertical' ? 'row-resize' : 'col-resize';
+  document.body.style.cursor = state.orientation === 'vertical' ? 'row-resize' : 'col-resize';
 });
 
 document.addEventListener('mousemove', (e) => {
   if (!isDragging) return;
-
   const containerRect = splitContainer.getBoundingClientRect();
   const minSize = 100;
 
-  if (orientation === 'vertical') {
+  if (state.orientation === 'vertical') {
     const newEditorHeight = e.clientY - containerRect.top;
     const maxHeight = containerRect.height - minSize;
-
     if (newEditorHeight >= minSize && newEditorHeight <= maxHeight) {
       editorWrapper.style.flexBasis = newEditorHeight + 'px';
     }
   } else {
     const newEditorWidth = e.clientX - containerRect.left;
     const maxWidth = containerRect.width - minSize;
-
     if (newEditorWidth >= minSize && newEditorWidth <= maxWidth) {
       editorWrapper.style.flexBasis = newEditorWidth + 'px';
     }
@@ -187,610 +128,129 @@ document.addEventListener('mouseup', () => {
     isDragging = false;
     document.body.style.userSelect = '';
     document.body.style.cursor = '';
-
-    // Save the current split position for current orientation
     const currentSize = parseInt(editorWrapper.style.flexBasis);
     if (!isNaN(currentSize)) {
-      const key = orientation === 'vertical' ? SPLIT_VERTICAL_KEY : SPLIT_HORIZONTAL_KEY;
+      const key = state.orientation === 'vertical' ? SPLIT_VERTICAL_KEY : SPLIT_HORIZONTAL_KEY;
       localStorage.setItem(key, currentSize);
     }
   }
 });
 
-/* ========= Render ========= */
-async function render(){
-  const code=editor.value.trim();
-  if(!code){output.innerHTML='<em>Nothing to render.</em>';updateDims();return;}
-  try{
-    const {svg,bindFunctions}=await mermaid.render('mmd-diagram',code);
-    output.innerHTML=svg;bindFunctions?.(output);applyZoom();
-  }catch(e){output.innerHTML=`<pre style="color:red">${e.message}</pre>`;updateDims();}
-}
-
 /* ========= Diagram panning ========= */
-let isPanning=false,panStartX,panStartY,panScrollLeft,panScrollTop;
-output.addEventListener('mousedown',e=>{
-  isPanning=true;
-  panStartX=e.clientX;panStartY=e.clientY;
-  panScrollLeft=output.scrollLeft;panScrollTop=output.scrollTop;
-  output.style.cursor='grabbing';
+let isPanning = false, panStartX, panStartY, panScrollLeft, panScrollTop;
+output.addEventListener('mousedown', e => {
+  isPanning = true;
+  panStartX = e.clientX; panStartY = e.clientY;
+  panScrollLeft = output.scrollLeft; panScrollTop = output.scrollTop;
+  output.style.cursor = 'grabbing';
   e.preventDefault();
 });
-document.addEventListener('mousemove',e=>{
-  if(!isPanning)return;
-  output.scrollLeft=panScrollLeft-(e.clientX-panStartX);
-  output.scrollTop=panScrollTop-(e.clientY-panStartY);
+document.addEventListener('mousemove', e => {
+  if (!isPanning) return;
+  output.scrollLeft = panScrollLeft - (e.clientX - panStartX);
+  output.scrollTop = panScrollTop - (e.clientY - panStartY);
 });
-document.addEventListener('mouseup',()=>{
-  if(isPanning){isPanning=false;output.style.cursor='grab';}
+document.addEventListener('mouseup', () => {
+  if (isPanning) { isPanning = false; output.style.cursor = 'grab'; }
 });
 
 /* ========= Event wiring ========= */
-$('#zoomIn').onclick =()=>{zoom*=1.25;applyZoom();};
-$('#zoomOut').onclick=()=>{zoom/=1.25;applyZoom();};
-$('#zoomReset').onclick=()=>{zoom=1;applyZoom();};
+$('#zoomIn').onclick = () => { state.zoom *= 1.25; doApplyZoom(); };
+$('#zoomOut').onclick = () => { state.zoom /= 1.25; doApplyZoom(); };
+$('#zoomReset').onclick = () => { state.zoom = 1; doApplyZoom(); };
 
-dimW.addEventListener('change',()=>{
-  const size=getSvgNaturalSize();
-  if(!size||!dimW.value) return;
-  zoom=parseInt(dimW.value)/size.width;
-  const svg=output.querySelector('svg');
-  if(svg) svg.style.transform=`scale(${zoom})`;
-  dimH.value=Math.round(size.height*zoom);
+dimW.addEventListener('change', () => {
+  const size = getSvgNaturalSize(output);
+  if (!size || !dimW.value) return;
+  state.zoom = parseInt(dimW.value) / size.width;
+  const svg = output.querySelector('svg');
+  if (svg) svg.style.transform = `scale(${state.zoom})`;
+  dimH.value = Math.round(size.height * state.zoom);
 });
-dimH.addEventListener('change',()=>{
-  const size=getSvgNaturalSize();
-  if(!size||!dimH.value) return;
-  zoom=parseInt(dimH.value)/size.height;
-  const svg=output.querySelector('svg');
-  if(svg) svg.style.transform=`scale(${zoom})`;
-  dimW.value=Math.round(size.width*zoom);
+dimH.addEventListener('change', () => {
+  const size = getSvgNaturalSize(output);
+  if (!size || !dimH.value) return;
+  state.zoom = parseInt(dimH.value) / size.height;
+  const svg = output.querySelector('svg');
+  if (svg) svg.style.transform = `scale(${state.zoom})`;
+  dimW.value = Math.round(size.width * state.zoom);
 });
 
 let pending;
 editor.addEventListener('input', e => {
-  updateLineNumbers();
+  doUpdateLineNumbers();
   clearTimeout(pending);
-
-  // Always save on any input
   saveCurrentTab();
 
-  // Mark tab as modified
-  const tab = tabs.find(t => t.id === activeTabId);
+  const tab = state.tabs.find(t => t.id === state.activeTabId);
   if (tab && !tab.modified) {
     tab.modified = true;
-    renderTabs();
+    doRenderTabs();
   }
 
   pending = setTimeout(() => {
     const isWhitespaceOnly =
-      (e.data && /^[ \t\n\r]$/.test(e.data)) ||  // normal typing
-      (e.inputType === 'insertParagraph') ||     // Enter on some browsers
-      (e.inputType === 'insertLineBreak');       // Shift+Enter
+      (e.data && /^[ \t\n\r]$/.test(e.data)) ||
+      (e.inputType === 'insertParagraph') ||
+      (e.inputType === 'insertLineBreak');
 
     if (!isWhitespaceOnly) {
-      render();         // auto‑render
-	}
+      doRender();
+    }
   }, DEBOUNCE);
 });
 
-themeSel.value=currentTheme;
-layoutSel.value=currentLayout;
-themeSel.onchange=()=>{currentTheme=themeSel.value;applyConfig();updateDiagramBackground();render();};
-layoutSel.onchange=()=>{currentLayout=layoutSel.value;applyConfig();render();};
+themeSel.value = state.currentTheme;
+layoutSel.value = state.currentLayout;
+themeSel.onchange = () => { state.currentTheme = themeSel.value; applyConfig(); updateDiagramBackground(output); doRender(); };
+layoutSel.onchange = () => { state.currentLayout = layoutSel.value; applyConfig(); doRender(); };
 
-/* ----- Save .mmd ----- */
-$('#btnSave').onclick=async ()=>{
-  const text=editor.value;if(!text.trim())return;
-  const blob=new Blob([text],{type:'text/plain'});
+/* ========= File I/O wiring ========= */
+setupSaveButton($('#btnSave'), {
+  editor, output,
+  saveTabs,
+  renderTabs: doRenderTabs
+});
 
-  // Get suggested filename from tab name
-  const tab = tabs.find(t => t.id === activeTabId);
-  const suggestedName = (tab && tab.name !== `Untitled ${tab.id}` ? tab.name : 'diagram') + '.mmd';
+setupOpenButton($('#btnOpen'), $('#fileOpen'), {
+  editor, output, templatePicker,
+  updateLineNumbers: doUpdateLineNumbers,
+  saveCurrentTab,
+  renderTabs: doRenderTabs,
+  render: doRender,
+  createNewTab: (showPicker) => doCreateNewTab(showPicker)
+});
 
-  // Try to use File System Access API for save dialog
-  if (window.showSaveFilePicker) {
-    try {
-      const handle = await window.showSaveFilePicker({
-        suggestedName,
-        types: [{
-          description: 'Mermaid Diagram',
-          accept: {'text/plain': ['.mmd', '.txt']}
-        }]
-      });
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
+setupExportButtons($('#btnSvg'), $('#btnPng'), $('#btnCopy'), output);
 
-      // Update tab name with saved filename and clear modified flag
-      if (tab && handle.name) {
-        tab.name = handle.name.replace(/\.mmd$/, '');
-        tab.modified = false;
-        saveTabs();
-        renderTabs();
-      }
-    } catch (err) {
-      // User cancelled or error occurred
-      if (err.name !== 'AbortError') {
-        console.error('Save failed:', err);
-        alert('Save failed: ' + err.message);
-      }
-    }
-  } else {
-    // Fallback to instant download for unsupported browsers
-    download(blob, suggestedName);
-  }
-};
-/* ----- Open .mmd ----- */
-const fileInput=$('#fileOpen');
-$('#btnOpen').onclick=()=>fileInput.click();
-fileInput.onchange=()=>{
-  const file=fileInput.files[0];if(!file)return;
-
-  // Create new tab if current tab has content
-  if (editor.value.trim()) {
-    createNewTab(false);
-  }
-
-  const r=new FileReader();
-  r.onload=e=>{
-    editor.value=e.target.result;
-    updateLineNumbers();
-    templatePicker.classList.add('hidden');
-    const tab = tabs.find(t => t.id === activeTabId);
-    if (tab) {
-      tab.name = file.name.replace(/\.mmd$/, '');
-      tab.content = e.target.result;
-      tab.modified = false; // File just opened, not modified
-    }
-    saveCurrentTab();
-    renderTabs();
-    render();
-  };
-  r.readAsText(file,'utf-8');
-};
-
-/* ----- PNG / SVG / Copy helpers ----- */
-function getPngBlob(cb){
-  const svg=$('svg',output);if(!svg)return alert('Nothing to export!');
-  const clone=svg.cloneNode(true);clone.style.transform='';
-  const {width:w,height:h}=svg.getBBox();const sw=w*zoom,sh=h*zoom;
-  clone.setAttribute('width',sw);clone.setAttribute('height',sh);
-  const data='data:image/svg+xml;charset=utf-8,'+
-    encodeURIComponent(new XMLSerializer().serializeToString(clone));
-  const img=new Image();img.crossOrigin='anonymous';
-  img.onload=()=>{
-    const canvas=Object.assign(document.createElement('canvas'),{width:sw,height:sh});
-    const ctx=canvas.getContext('2d');
-    // Fill background with theme-appropriate color
-    ctx.fillStyle=themeBackgrounds[currentTheme]||'#ffffff';
-    ctx.fillRect(0,0,sw,sh);
-    ctx.drawImage(img,0,0,sw,sh);
-    canvas.toBlob(cb,'image/png');
-  };img.src=data;
-}
-const download=(blob,name)=>{
-  const url=URL.createObjectURL(blob);
-  const a=Object.assign(document.createElement('a'),{href:url,download:name});
-  document.body.append(a);a.click();a.remove();URL.revokeObjectURL(url);
-};
-$('#btnSvg').onclick=async ()=>{
-  const svg=$('svg',output);if(!svg)return alert('Nothing to export!');
-  const svgString = new XMLSerializer().serializeToString(svg);
-  const blob = new Blob([svgString], {type:'image/svg+xml'});
-
-  // Try to use File System Access API for save dialog
-  if (window.showSaveFilePicker) {
-    try {
-      const handle = await window.showSaveFilePicker({
-        suggestedName: 'diagram.svg',
-        types: [{
-          description: 'SVG Image',
-          accept: {'image/svg+xml': ['.svg']}
-        }]
-      });
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-    } catch (err) {
-      // User cancelled or error occurred
-      if (err.name !== 'AbortError') {
-        console.error('Save failed:', err);
-        alert('Save failed: ' + err.message);
-      }
-    }
-  } else {
-    // Fallback to instant download for unsupported browsers
-    download(blob, 'diagram.svg');
-  }
-};
-$('#btnPng').onclick=async ()=>{
-  getPngBlob(async (blob) => {
-    // Try to use File System Access API for save dialog
-    if (window.showSaveFilePicker) {
-      try {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: 'diagram.png',
-          types: [{
-            description: 'PNG Image',
-            accept: {'image/png': ['.png']}
-          }]
-        });
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-      } catch (err) {
-        // User cancelled or error occurred
-        if (err.name !== 'AbortError') {
-          console.error('Save failed:', err);
-          alert('Save failed: ' + err.message);
-        }
-      }
-    } else {
-      // Fallback to instant download for unsupported browsers
-      download(blob, 'diagram.png');
-    }
-  });
-};
-$('#btnCopy').onclick=()=>{
-  if(!navigator.clipboard||!window.ClipboardItem){alert('Clipboard API unsupported');return;}
-  getPngBlob(b=>navigator.clipboard
-    .write([new ClipboardItem({'image/png':b})])
-    .catch(e=>alert('Failed: '+e)));
-};
-
-/* ========= Templates ========= */
-const templates = {
-  flowchart: `flowchart TD
-    A[Arrive at Hogwarts] --> B{Sorting Hat Decision}
-    B -- Brave --> C[Gryffindor]
-    B -- Cunning --> D[Slytherin]
-    B -- Wise --> E[Ravenclaw]
-    B -- Loyal --> F[Hufflepuff]
-    C --> G[Begin Classes]
-    D --> G
-    E --> G
-    F --> G`,
-
-  sequence: `sequenceDiagram
-    participant Harry
-    participant Hedwig
-    participant Ron
-    participant Hermione
-
-    Harry->>Hedwig: Write letter to Ron
-    activate Hedwig
-    Hedwig->>Ron: Deliver letter
-    activate Ron
-    Ron-->>Hedwig: Write reply
-    deactivate Ron
-    Hedwig-->>Harry: Return with response
-    deactivate Hedwig
-
-    Harry->>Hedwig: Send to Hermione
-    activate Hedwig
-    Hedwig->>Hermione: Deliver letter
-    activate Hermione
-    Hermione-->>Hedwig: Detailed reply (3 pages)
-    deactivate Hermione
-    Hedwig-->>Harry: Exhausted return
-    deactivate Hedwig`,
-
-  gantt: `gantt
-    title Hogwarts School Year
-    dateFormat YYYY-MM-DD
-    section First Term
-    Welcome Feast           :a1, 2024-09-01, 7d
-    Defense Against Dark Arts :a2, after a1, 60d
-    Potions Class          :a3, after a1, 60d
-    section Halloween
-    Troll in Dungeon       :b1, 2024-10-31, 1d
-    Saving Hermione        :b2, after b1, 1d
-    section Quidditch
-    First Match            :c1, 2024-11-15, 1d
-    Training Sessions      :c2, 2024-10-01, 90d
-    section Christmas
-    Winter Break           :d1, 2024-12-20, 14d
-    section Final Term
-    Exams Preparation      :e1, 2025-05-01, 30d
-    Final Exams            :e2, after e1, 7d`,
-
-  class: `classDiagram
-    class Wizard {
-        +String name
-        +String house
-        +int magicLevel
-        +castSpell()
-        +brewPotion()
-    }
-    class Gryffindor {
-        +String trait = "Brave"
-        +summonPatronus()
-        +defendAgainstDarkArts()
-    }
-    class Slytherin {
-        +String trait = "Cunning"
-        +speakParseltongue()
-        +masterLegilimency()
-    }
-    class Ravenclaw {
-        +String trait = "Wise"
-        +solveRiddles()
-        +advancedCharms()
-    }
-    Wizard <|-- Gryffindor
-    Wizard <|-- Slytherin
-    Wizard <|-- Ravenclaw
-
-    class Wand {
-        +String wood
-        +String core
-        +choosesWizard()
-    }
-    Wizard "1" --> "1" Wand : wields`,
-
-  erDiagram: `erDiagram
-    STUDENT ||--o{ ENROLLMENT : enrolls
-    STUDENT {
-        string id PK
-        string name
-        string house
-        int year
-        date birthdate
-    }
-    HOUSE ||--o{ STUDENT : belongs_to
-    HOUSE {
-        string name PK
-        string founder
-        string commonRoom
-        int points
-    }
-    COURSE ||--o{ ENROLLMENT : has
-    COURSE {
-        string id PK
-        string name
-        string professor
-        string classroom
-    }
-    ENROLLMENT {
-        string studentId FK
-        string courseId FK
-        string grade
-        int attendance
-    }
-    HOUSE ||--o{ QUIDDITCH_TEAM : fields
-    QUIDDITCH_TEAM {
-        string houseId FK
-        string captain
-        int wins
-    }`,
-
-  state: `stateDiagram-v2
-    [*] --> Human
-    Human --> Bitten : Werewolf Attack
-    Bitten --> Infected : Survive Bite
-    Infected --> Transforming : Full Moon Rises
-    Transforming --> Werewolf : Complete Transformation
-    Werewolf --> Hunting : Night Falls
-    Hunting --> Werewolf : Prowling
-    Werewolf --> Reverting : Dawn Breaks
-    Reverting --> Human : Morning Light
-    Human --> Infected : Monthly Cycle
-    Infected --> Cured : Drink Wolfsbane Potion
-    Cured --> [*]`,
-
-  pie: `pie title House Points Championship
-    "Gryffindor" : 482
-    "Slytherin" : 472
-    "Ravenclaw" : 426
-    "Hufflepuff" : 352`,
-
-  gitGraph: `gitGraph
-    commit id: "Selected as Champion"
-    commit id: "Study dragons"
-    branch dragon-task
-    checkout dragon-task
-    commit id: "Learn Accio spell"
-    commit id: "Practice on Firebolt"
-    commit id: "Get past Hungarian Horntail"
-    checkout main
-    merge dragon-task tag: "Golden-Egg"
-    commit id: "Decode egg clue"
-    branch lake-task
-    checkout lake-task
-    commit id: "Research gillyweed"
-    commit id: "Test breathing underwater"
-    commit id: "Save hostages from lake"
-    checkout main
-    merge lake-task tag: "Second-Place"
-    commit id: "Prepare for maze"
-    commit id: "Enter maze"
-    commit id: "Grab Triwizard Cup"`,
-
-  journey: `journey
-    title Harry's First Year at Hogwarts
-    section Arrival
-      Board Hogwarts Express: 5: Harry, Ron, Hermione
-      Cross the Lake: 4: Harry, First Years
-      Sorting Ceremony: 3: Harry, Sorting Hat
-    section Learning Magic
-      First Potions Class: 2: Harry, Snape
-      Flying Lessons: 5: Harry, Madam Hooch
-      Defense Against Dark Arts: 4: Harry, Professor
-    section Adventures
-      Troll in Dungeon: 3: Harry, Ron, Hermione
-      First Quidditch Match: 5: Harry, Team
-      Forbidden Forest: 2: Harry, Detention
-    section Final Challenge
-      Through the Trapdoor: 3: Harry, Ron, Hermione
-      Defeat Voldemort: 4: Harry
-      House Cup Victory: 5: Harry, Gryffindor`
-};
-
-/* ========= Tab Management ========= */
-function saveCurrentTab() {
-  if (activeTabId !== null) {
-    const tab = tabs.find(t => t.id === activeTabId);
-    if (tab) {
-      tab.content = editor.value;
-      saveTabs();
-    }
-  }
-}
-
-function saveTabs() {
-  localStorage.setItem(LS_TABS_KEY, JSON.stringify(tabs));
-  localStorage.setItem(LS_ACTIVE_TAB_KEY, activeTabId);
-}
-
-function loadTabs() {
-  const savedTabs = localStorage.getItem(LS_TABS_KEY);
-  const savedActiveId = localStorage.getItem(LS_ACTIVE_TAB_KEY);
-
-  if (savedTabs) {
-    tabs = JSON.parse(savedTabs);
-    // Ensure all tabs have a modified flag (backward compatibility)
-    tabs.forEach(tab => {
-      if (tab.modified === undefined) {
-        tab.modified = false;
-      }
-    });
-    nextTabId = Math.max(...tabs.map(t => t.id), 0) + 1;
-    activeTabId = savedActiveId ? parseInt(savedActiveId) : (tabs[0]?.id || null);
-  }
-
-  if (tabs.length === 0) {
-    createNewTab();
-  } else {
-    renderTabs();
-    switchToTab(activeTabId, true);
-  }
-}
-
-function renderTabs() {
-  // Clear all tabs but keep the + button
-  const newTabBtn = $('#btnNewTab');
-  tabList.innerHTML = '';
-
-  tabs.forEach(tab => {
-    const tabEl = document.createElement('div');
-    tabEl.className = 'tab' + (tab.id === activeTabId ? ' active' : '');
-    const modifiedIndicator = tab.modified ? ' *' : '';
-    tabEl.innerHTML = `
-      <span class="tab-name">${tab.name}${modifiedIndicator}</span>
-      <span class="tab-close" data-tab-id="${tab.id}">×</span>
-    `;
-    tabEl.addEventListener('click', (e) => {
-      if (!e.target.classList.contains('tab-close')) {
-        switchToTab(tab.id);
-      }
-    });
-    tabList.appendChild(tabEl);
-  });
-
-  // Re-add the + button at the end
-  tabList.appendChild(newTabBtn);
-}
-
-function switchToTab(tabId, skipSave) {
-  if (!skipSave) saveCurrentTab();
-  activeTabId = tabId;
-  const tab = tabs.find(t => t.id === tabId);
-  if (tab) {
-    editor.value = tab.content;
-    updateLineNumbers();
-    renderTabs();
-    render();
-
-    // Hide template picker if switching to a tab with content
-    if (tab.content.trim()) {
-      templatePicker.classList.add('hidden');
-    }
-  }
-}
-
-function getNextUntitledNumber() {
-  // Find all tabs with "Untitled X" pattern
-  const untitledNumbers = tabs
-    .map(tab => {
-      const match = tab.name.match(/^Untitled (\d+)$/);
-      return match ? parseInt(match[1]) : 0;
-    })
-    .filter(num => num > 0);
-
-  // Return highest + 1, or 1 if none exist
-  return untitledNumbers.length > 0 ? Math.max(...untitledNumbers) + 1 : 1;
-}
-
-function createNewTab(showPicker = true) {
-  saveCurrentTab();
-  const newTab = {
-    id: nextTabId++,
-    name: `Untitled ${getNextUntitledNumber()}`,
-    content: '',
-    modified: false
-  };
-  tabs.push(newTab);
-  activeTabId = newTab.id;
-  editor.value = '';
-  updateLineNumbers();
-  saveTabs();
-  renderTabs();
-
-  if (showPicker) {
-    templatePicker.classList.remove('hidden');
-  } else {
-    templatePicker.classList.add('hidden');
-  }
-
-  output.innerHTML = '<em>Nothing to render.</em>';
-  editor.focus();
-}
-
-function closeTab(tabId) {
-  const index = tabs.findIndex(t => t.id === tabId);
-  if (index === -1) return;
-
-  tabs.splice(index, 1);
-
-  if (tabs.length === 0) {
-    createNewTab();
-  } else if (tabId === activeTabId) {
-    // Switch to adjacent tab
-    const newIndex = Math.min(index, tabs.length - 1);
-    switchToTab(tabs[newIndex].id);
-  } else {
-    saveTabs();
-    renderTabs();
-  }
-}
-
-// Tab event listeners
-$('#btnNewTab').onclick = () => createNewTab(true);
+/* ========= Tab event listeners ========= */
+btnNewTab.onclick = () => doCreateNewTab(true);
 
 tabList.addEventListener('click', (e) => {
   if (e.target.classList.contains('tab-close')) {
     const tabId = parseInt(e.target.dataset.tabId);
-    closeTab(tabId);
+    doCloseTab(tabId);
     e.stopPropagation();
   }
 });
 
-// Template picker handlers
+tabList.addEventListener('tab-switch', (e) => {
+  doSwitchToTab(e.detail.tabId);
+});
+
+/* ========= Template picker ========= */
 templatePicker.querySelectorAll('.template-card').forEach(card => {
   card.onclick = () => {
     const templateName = card.dataset.template;
     if (templates[templateName]) {
       editor.value = templates[templateName];
-      updateLineNumbers();
-      const tab = tabs.find(t => t.id === activeTabId);
-      if (tab) {
-        tab.modified = true; // Template selected, needs to be saved
-      }
+      doUpdateLineNumbers();
+      const tab = state.tabs.find(t => t.id === state.activeTabId);
+      if (tab) { tab.modified = true; }
       saveCurrentTab();
       templatePicker.classList.add('hidden');
-      renderTabs();
-      render();
+      doRenderTabs();
+      doRender();
       editor.focus();
     }
   };
@@ -802,8 +262,15 @@ $('#btnSkipTemplate').onclick = () => {
 };
 
 /* ========= Initialize ========= */
-updateDiagramBackground();
-loadTabs();
-updateLineNumbers();
+updateDiagramBackground(output);
+loadTabs({
+  editor, output, tabList, templatePicker,
+  updateLineNumbers: doUpdateLineNumbers,
+  render: doRender,
+  renderTabs: doRenderTabs,
+  switchToTab: doSwitchToTab,
+  createNewTab: doCreateNewTab
+});
+doUpdateLineNumbers();
 
-window.addEventListener('beforeunload',()=>{saveCurrentTab();});
+window.addEventListener('beforeunload', () => { saveCurrentTab(); });
