@@ -15,10 +15,48 @@ const layoutToggle = $('#layoutToggle');
 const tabList = $('#tabList');
 const templatePicker = $('#templatePicker');
 const lineNumbers = $('#lineNumbers');
+const editorHighlight = $('#editorHighlight');
 const btnNewTab = $('#btnNewTab');
 
+/* ========= Error highlight ========= */
+function clearErrorHighlight() {
+  editorHighlight.innerHTML = '';
+  const prev = lineNumbers.querySelector('.error-line-number');
+  if (prev) prev.classList.remove('error-line-number');
+}
+
+function showErrorHighlight(line) {
+  clearErrorHighlight();
+  if (!line || line < 1) return;
+
+  const EDITOR_PADDING_TOP = 16; // 1rem
+  const LINE_HEIGHT = 20;
+  const topPx = EDITOR_PADDING_TOP + (line - 1) * LINE_HEIGHT;
+
+  editorHighlight.style.left = lineNumbers.offsetWidth + 'px';
+
+  const mark = document.createElement('div');
+  mark.className = 'error-line-highlight';
+  mark.style.top = topPx + 'px';
+  editorHighlight.appendChild(mark);
+
+  const lineNumDivs = lineNumbers.querySelector('.line-numbers-inner')?.children;
+  if (lineNumDivs?.[line - 1]) {
+    lineNumDivs[line - 1].classList.add('error-line-number');
+  }
+}
+
 /* ========= Bound helpers ========= */
-function doRender() { render(editor, output, dimW, dimH); }
+async function doRender() {
+  const result = await render(editor, output, dimW, dimH);
+  if (result?.success) {
+    clearErrorHighlight();
+  } else if (result?.errorLine) {
+    showErrorHighlight(result.errorLine);
+  } else {
+    clearErrorHighlight();
+  }
+}
 function doApplyZoom() { applyZoom(output, dimW, dimH); }
 function doUpdateLineNumbers() {
   const count = editor.value.split('\n').length;
@@ -63,6 +101,7 @@ lineNumbers.appendChild(lineNumbersInner);
 
 editor.addEventListener('scroll', () => {
   lineNumbersInner.style.transform = `translateY(${-editor.scrollTop}px)`;
+  editorHighlight.style.transform = `translateY(${-editor.scrollTop}px)`;
 });
 
 /* ========= Resizable divider ========= */

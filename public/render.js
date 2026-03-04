@@ -45,13 +45,45 @@ export function updateDiagramBackground(output) {
   output.style.backgroundColor = themeBackgrounds[state.currentTheme] || '#ffffff';
 }
 
+function parseErrorLine(message) {
+  const patterns = [
+    /Parse error on line (\d+)/i,
+    /Error on line (\d+)/i,
+    /on line (\d+)/i,
+    /at line (\d+)/i,
+    /line (\d+)/i,
+  ];
+  for (const re of patterns) {
+    const m = message.match(re);
+    if (m) return parseInt(m[1], 10);
+  }
+  return null;
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function formatErrorMessage(message, line) {
+  let cleaned = message.replace(/^Error:\s*/i, '');
+  if (cleaned.length > 500) cleaned = cleaned.slice(0, 500) + '\u2026';
+  const lineInfo = line ? `<div class="error-line-info">Error on line ${line}</div>` : '';
+  return `<div class="error-container">${lineInfo}<pre class="error-message">${escapeHtml(cleaned)}</pre></div>`;
+}
+
 export async function render(editor, output, dimW, dimH) {
   const code = editor.value.trim();
-  if (!code) { output.innerHTML = '<em>Nothing to render.</em>'; updateDims(output, dimW, dimH); return; }
+  if (!code) { output.innerHTML = '<em>Nothing to render.</em>'; updateDims(output, dimW, dimH); return { success: true }; }
   try {
     const { svg, bindFunctions } = await mermaid.render('mmd-diagram', code);
     output.innerHTML = svg; bindFunctions?.(output); applyZoom(output, dimW, dimH);
-  } catch (e) { output.innerHTML = `<pre style="color:red">${e.message}</pre>`; updateDims(output, dimW, dimH); }
+    return { success: true };
+  } catch (e) {
+    const line = parseErrorLine(e.message);
+    output.innerHTML = formatErrorMessage(e.message, line);
+    updateDims(output, dimW, dimH);
+    return { success: false, errorLine: line };
+  }
 }
 
 export function getPngBlob(output, cb) {
