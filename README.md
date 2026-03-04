@@ -42,7 +42,7 @@ npm run dev
 
 **Important:** `npm install` is required even if you're not developing. It runs a postinstall script that copies the Mermaid library files and chunks from `node_modules/` into `public/`. Without this step, the app won't work.
 
-No Node? You'll need Node just for the initial `npm install`, then you can use any static server (`python -m http.server 8000 -d public`, `npx serve public`, VS Code Live‑Server).
+No Node? You'll need Node for `npm install` and `npm run dev`. Alternatively, after running `npm install` once, you can serve `public/` with any static server (`npx serve public`, VS Code Live‑Server, etc.).
 
 ---
 
@@ -64,8 +64,8 @@ No Node? You'll need Node just for the initial `npm install`, then you can use a
 ## 🛠️ Development scripts
 
 ```bash
-npm run dev       # runs npm run copy, then starts python http.server on port 8000
-npm run copy      # copies .mjs entries + chunks from node_modules into public/
+npm run dev       # copies assets, stamps version, then starts browser-sync with live reload on port 8000
+npm run copy      # copies .mjs entries + chunks from node_modules into public/, stamps version into index.html
 ```
 
 Viewer logic lives in `public/viewer.js`, styles in `public/viewer.css`.
