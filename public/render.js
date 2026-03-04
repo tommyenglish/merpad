@@ -37,7 +37,12 @@ export function updateDims(output, dimW, dimH) {
 
 export function applyZoom(output, dimW, dimH) {
   const svg = output.querySelector('svg');
-  if (svg) svg.style.transform = `scale(${state.zoom})`;
+  if (svg) {
+    svg.style.transform = `scale(${state.zoom})`;
+    const { width, height } = svg.getBBox();
+    svg.style.width = (width * state.zoom) + 'px';
+    svg.style.height = (height * state.zoom) + 'px';
+  }
   updateDims(output, dimW, dimH);
 }
 
