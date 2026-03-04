@@ -9,15 +9,14 @@
     "postinstall": "node scripts/copy-assets.js",
     "dev": "npm run copy && browser-sync start --server public --files \"public/**/*\" --port 8000 --no-notify",
     "copy": "node scripts/copy-assets.js && node scripts/stamp-version.js",
-    "build": "rollup -c && node scripts/stamp-version.js"
+    "build": "npm run copy && node scripts/build.js"
   },
   "dependencies": {
     "@mermaid-js/layout-elk": "^0.2.0",
     "mermaid": "^11.12.3"
   },
   "devDependencies": {
-    "@rollup/plugin-node-resolve": "^15",
     "browser-sync": "^3.0.4",
-    "rollup": "^4"
+    "esbuild": "^0.27.3"
   }
 }
